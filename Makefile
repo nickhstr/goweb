@@ -10,14 +10,14 @@ create-coverage:
 	@GO_ENV=test go test -race -coverprofile=coverage.out ./...
 	@echo "👍 Done."
 
-## coverage: Runs tests and opens a browser window to visualize test coverage
+## coverage: Runs tests and reports coverage
 .PHONY: coverage
 coverage: create-coverage
 	@echo "=============================== Coverage Summary ==============================="
 	@go tool cover -func=coverage.out
 	@echo "================================================================================"
 
-## coverage: Runs tests and opens a browser window to visualize test coverage
+## coverage-html: Runs tests and opens a browser window to visualize test coverage
 .PHONY: coverage-html
 coverage-html: create-coverage
 	@echo "🛠  Opening coverage report in browser..."
