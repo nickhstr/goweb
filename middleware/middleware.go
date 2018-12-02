@@ -106,7 +106,7 @@ func Create(config Config) http.Handler {
 	middleware = append(
 		middleware,
 		Logger,
-		handlers.RecoveryHandler(),
+		Recover,
 	)
 
 	return Compose(
