@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"github.com/nickhstr/goweb/env"
-	// Init logger config
-	_ "github.com/nickhstr/goweb/logger"
 	"github.com/rs/dnscache" // nolint: gotype
 	"github.com/rs/zerolog/log"
 )
