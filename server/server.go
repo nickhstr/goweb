@@ -5,8 +5,11 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/nickhstr/goweb/env"
@@ -51,14 +54,43 @@ func Start(mux http.Handler) {
 		dnsCacheTTTL,
 	)
 
+	srv := &http.Server{Handler: mux}
+
+	idlConnsClosed := make(chan struct{})
+	go shutdown(srv, idlConnsClosed)
+
 	log.Log().
 		Str("address", address).
 		Str("mode", mode).
 		Msg("Server listening")
 
-	if err = http.Serve(listener, mux); err != nil {
-		log.Fatal().Err(err).Msg("Server failed to start")
+	err = srv.Serve(listener)
+	if err != nil && err != http.ErrServerClosed {
+		log.Fatal().
+			Err(err).
+			Msg("Server failed to start")
 	}
+
+	<-idlConnsClosed
+}
+
+// Shutdown server gracefully on SIGINT or SIGTERM
+func shutdown(server *http.Server, idleConnectionsClosed chan struct{}) {
+	// Block until signal is received
+	sigint := make(chan os.Signal, 1)
+	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+	<-sigint
+
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.Error().
+			Err(err).
+			Msg("Server shutdown error")
+	}
+
+	log.Log().Msg("Server shutdown")
+
+	// Close channel to signal shutdown is complete
+	close(idleConnectionsClosed)
 }
 
 // DNSCache adds caching to dns lookups, performed by the standard library's http.DefaultClient.
