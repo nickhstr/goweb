@@ -26,9 +26,9 @@ func Headers(appHeaders AppHeaders) Middleware {
 	}
 
 	headers := map[string]string{
-		"webcakes-app-name":    appHeaders.AppName,
-		"webcakes-app-version": appVersion,
-		"webcakes-region":      appHeaders.Region,
+		"app-name":    appHeaders.AppName,
+		"app-version": appVersion,
+		"region":      appHeaders.Region,
 	}
 
 	return func(handler http.Handler) http.Handler {

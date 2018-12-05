@@ -34,9 +34,9 @@ func TestHeaders(t *testing.T) {
 
 			c.Convey("The headers middleware should add headers from the config", func() {
 				expected := map[string]string{
-					http.CanonicalHeaderKey("webcakes-app-name"):    appName,
-					http.CanonicalHeaderKey("webcakes-app-version"): appVersion + "-" + gitRevision,
-					http.CanonicalHeaderKey("webcakes-region"):      region,
+					http.CanonicalHeaderKey("app-name"):    appName,
+					http.CanonicalHeaderKey("app-version"): appVersion + "-" + gitRevision,
+					http.CanonicalHeaderKey("region"):      region,
 				}
 
 				respRec := httptest.NewRecorder()
