@@ -98,6 +98,9 @@ func getRedis() redisClient {
 
 	addr := env.Get("REDIS_HOST", "localhost") + ":" + env.Get("REDIS_PORT", "6379")
 	mode := env.Get("REDIS_MODE", "server")
+	maxRetries := 20
+	minRetryBackoff := 50 * time.Millisecond
+	maxRetryBackoff := 2000 * time.Millisecond
 	onConnect := func(c *redis.Conn) error {
 		log.Info().
 			Str("address", addr).
@@ -109,16 +112,22 @@ func getRedis() redisClient {
 	switch mode {
 	case "cluster":
 		clusterOptions := &redis.ClusterOptions{
-			Addrs:     []string{addr},
-			OnConnect: onConnect,
+			Addrs:           []string{addr},
+			MaxRetries:      maxRetries,
+			MinRetryBackoff: minRetryBackoff,
+			MaxRetryBackoff: maxRetryBackoff,
+			OnConnect:       onConnect,
 		}
 		redisInstance = redis.NewClusterClient(clusterOptions)
 	case "server":
 		fallthrough
 	default:
 		options := &redis.Options{
-			Addr:      addr,
-			OnConnect: onConnect,
+			Addr:            addr,
+			MaxRetries:      maxRetries,
+			MinRetryBackoff: minRetryBackoff,
+			MaxRetryBackoff: maxRetryBackoff,
+			OnConnect:       onConnect,
 		}
 		redisInstance = redis.NewClient(options)
 	}
