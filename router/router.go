@@ -3,7 +3,7 @@ package router
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/go-chi/chi"
 )
 
 // New returns a new router.
@@ -16,14 +16,14 @@ import (
 // the more widely understood net/http package, and ensures access to httprouter's
 // Params is only available via an *http.Request's context.
 func New(routes []Route) http.Handler {
-	router := httprouter.New()
+	router := chi.NewRouter()
 
 	// Register routes with router
 	for _, route := range routes {
 		var handler http.Handler
 		handler = route.Handler
 
-		router.Handler(route.Method, route.Path, handler)
+		router.Method(route.Method, route.Path, handler)
 	}
 
 	return router
