@@ -6,15 +6,9 @@ import (
 	"github.com/go-chi/chi"
 )
 
-// New returns a new router.
-// The return type has been explicitly set as an http.Handler to enforce Route
-// registration via this New function. By doing so, all route handlers are
-// guaranteed to be of the same http.HandlerFunc type, rather than the
-// httprouter.Handle type.
-// Using the standard library's types and interfaces is desirable as it allows
-// more flexibility in which router to use, keeps handlers standardized with
-// the more widely understood net/http package, and ensures access to httprouter's
-// Params is only available via an *http.Request's context.
+// New creates a new router, fully compatible with net/http.
+// Maintaining this compatibility allows flexibility in choosing a routing library,
+// without sacrificing the ability to use net/http-compatible packages.
 func New(routes []Route) http.Handler {
 	router := chi.NewRouter()
 

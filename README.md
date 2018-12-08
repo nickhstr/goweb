@@ -8,7 +8,7 @@ and idiomatic, while adhering to the standard library's APIs when possible.
 ## Features
 * General middleware
 * Configurable logger - built on github.com/rs/zerolog
-* Router - routes registration with github.com/julienschmidt/httprouter
+* Router - routes registration with github.com/go-chi/chi
 * Server - dns lookup caching and automatic port resolution
 * Data access layer - request client with redis
 * Newrelic - handler wrapper and custom logging, using github.com/newrelic/go-agent
