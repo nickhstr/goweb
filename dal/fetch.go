@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nickhstr/goweb/dal/cache" // nolint: gotype
+	"github.com/nickhstr/goweb/cache" // nolint: gotype
 	"github.com/nickhstr/goweb/logger"
 )
 
