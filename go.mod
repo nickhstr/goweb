@@ -2,7 +2,7 @@ module github.com/nickhstr/goweb
 
 require (
 	github.com/codegangsta/negroni v1.0.0 // indirect
-	github.com/go-chi/chi v3.3.3+incompatible
+	github.com/go-chi/chi v4.0.1+incompatible
 	github.com/go-redis/redis v6.14.2+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20181103185306-d547d1d9531e // indirect
 	github.com/gorilla/handlers v1.4.0
