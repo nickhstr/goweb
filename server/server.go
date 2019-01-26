@@ -164,11 +164,15 @@ func FreePortListener() net.Listener {
 
 // Host gets the host for a listener's address.
 func Host() string {
+	var defaultHost string
+
 	if env.Dev() {
-		return "localhost"
+		defaultHost = "localhost"
+	} else {
+		defaultHost = "0.0.0.0"
 	}
 
-	return "0.0.0.0"
+	return env.Get("HOST", defaultHost)
 }
 
 // Port gets the port for a listener's address.
