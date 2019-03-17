@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/nickhstr/goweb/env"
-	"github.com/rs/dnscache" // nolint: gotype
+	"github.com/rs/dnscache"
 	"github.com/rs/zerolog/log"
 )
 

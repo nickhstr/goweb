@@ -1,5 +1,7 @@
 module github.com/nickhstr/goweb
 
+go 1.12
+
 require (
 	github.com/codegangsta/negroni v1.0.0 // indirect
 	github.com/go-chi/chi v4.0.1+incompatible

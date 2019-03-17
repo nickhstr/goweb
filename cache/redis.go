@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/go-redis/redis" // nolint: gotype
+	"github.com/go-redis/redis"
 	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
 )
