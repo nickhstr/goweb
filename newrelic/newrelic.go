@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	nr "github.com/newrelic/go-agent" // nolint: gotype
+	nr "github.com/newrelic/go-agent"
 	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
 	"github.com/rs/zerolog"
