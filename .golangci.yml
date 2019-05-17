@@ -1,0 +1,5 @@
+linters:
+  fast: true
+  enable:
+    - golint
+    - unused
