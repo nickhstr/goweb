@@ -34,7 +34,7 @@ install:
 ## test: Runs all tests
 .PHONY: test
 test:
-	@echo "🏃 Running all Go tests..."
+	@echo "🏃 Running all tests..."
 	GO_ENV=test go test -race ./...
 	@echo "👍 Done."
 

@@ -20,6 +20,9 @@ import (
 
 var log = logger.New(nil).With().Str("namespace", "dal").Logger()
 
+// Use for getTTLFromResponse
+var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
+
 // FetchConfig holds all the information needed by dal.Fetch() to make a request.
 type FetchConfig struct {
 	*url.URL
@@ -116,6 +119,7 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 	return response, nil
 }
 
+// Verifies that the given FetchConfig has the basic pieces of information supplied.
 func validateFetchConfig(fc *FetchConfig) error {
 	if fc == nil {
 		return errors.New("No FetchConfig provided")
@@ -130,19 +134,18 @@ func validateFetchConfig(fc *FetchConfig) error {
 	return nil
 }
 
+// Attempts to get a TTL value from a response's "cache-control" header.
+// Otherwise, the given default TTL is used.
 func getTTLFromResponse(r *http.Response, defaultTTL int) int {
-	var ttl int
+	var (
+		ttl int
+		err error
+	)
 
-	cacheControl := r.Header[http.CanonicalHeaderKey("cache-control")]
-	maxAgeRegex, err := regexp.Compile(`max-age=\d+`)
-	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to compile getTTLFromResponse()'s regex")
-		return ttl
-	}
+	headerKey := http.CanonicalHeaderKey("cache-control")
+	cacheControlValues := r.Header[headerKey]
 
-	for _, val := range cacheControl {
+	for _, val := range cacheControlValues {
 		match := maxAgeRegex.FindString(val)
 
 		if match != "" {
