@@ -16,7 +16,7 @@ func TestAuth(t *testing.T) {
 		helloResp := []byte("Hello world")
 		helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write(helloResp)
+			_, _ = w.Write(helloResp)
 		})
 
 		c.Convey("When the AuthConfig is valid", func() {

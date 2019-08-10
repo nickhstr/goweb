@@ -12,7 +12,7 @@ import (
 // Add Secure test nly so that coverage is not unecessarily lowered.
 func TestSecure(t *testing.T) {
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello"))
+		_, _ = w.Write([]byte("Hello"))
 	})
 
 	c.Convey("Given a Secure middleware", t, func() {

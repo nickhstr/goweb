@@ -13,7 +13,7 @@ func TestHeaders(t *testing.T) {
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(helloResp)
+		_, _ = w.Write(helloResp)
 	})
 
 	c.Convey("Given a headers config", t, func() {

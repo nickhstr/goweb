@@ -24,6 +24,13 @@ coverage-html: create-coverage
 	@go tool cover -html=coverage.out
 	@echo "👍 Done."
 
+## lint: Runs golangci-lint against entire project
+.PHONY: lint
+lint:
+	@echo "🔍  Linting files..."
+	@golangci-lint run
+	@echo "👍 Done."
+
 ## install: Downloads all app dependencies
 .PHONY: install
 install:

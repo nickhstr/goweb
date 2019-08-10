@@ -14,7 +14,7 @@ func TestStatusRecorder(t *testing.T) {
 	c.Convey("Given a handler", t, func() {
 		notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(404)
-			w.Write([]byte("Not found"))
+			_, _ = w.Write([]byte("Not found"))
 		})
 
 		c.Convey("When the reponse status needs to be recorded", func() {
@@ -38,7 +38,7 @@ func TestStatusRecorder(t *testing.T) {
 // Add Logger test only so that coverage is not unecessarily lowered.
 func TestLogger(t *testing.T) {
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello"))
+		_, _ = w.Write([]byte("Hello"))
 	})
 
 	c.Convey("Given a Logger", t, func() {
