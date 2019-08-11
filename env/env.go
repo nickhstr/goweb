@@ -10,10 +10,8 @@ import (
 )
 
 func init() {
-	// Only load variables from .env while in development mode
-	if Dev() {
-		_ = godotenv.Load()
-	}
+	// Try to load vars from .env file.
+	_ = godotenv.Load()
 }
 
 // Get provides a way to get the value of a supplied environment

@@ -35,7 +35,7 @@ func Logger(handler http.Handler) http.Handler {
 			Interface("request-headers", r.Header).
 			Str("response-time", fmt.Sprintf("%v", time.Since(start))).
 			Int("status", rw.status).
-			Str("app-name", env.AppName()).
+			Str("app-name", env.Get("APP_NAME", "web-service")).
 			Msg("Route handler")
 	})
 }
