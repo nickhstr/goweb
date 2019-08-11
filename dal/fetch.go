@@ -34,6 +34,8 @@ type FetchConfig struct {
 	// Query is the url.Values form of the request's query params.
 	// These are to be encoded for use by URL's RawQuery.
 	Query url.Values
+	// TTL is the time to live for a request's response in cache
+	TTL time.Duration
 }
 
 // Fetch makes a request, and is responsible for caching the response data.
@@ -41,6 +43,7 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 	var (
 		response []byte
 		err      error
+		ttl      = fc.TTL
 	)
 
 	err = validateFetchConfig(fc)
@@ -85,7 +88,10 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 	// Make sure to always close body
 	defer resp.Body.Close()
 
-	ttl := time.Duration(getTTLFromResponse(resp, 60)) * time.Second
+	if fc.TTL == 0 {
+		ttl = getTTLFromResponse(resp, fc.TTL)
+	}
+
 	log.Info().
 		Str("url", fetchURL).
 		Str("response-time", fmt.Sprintf("%v", time.Since(start))).
@@ -130,17 +136,17 @@ func validateFetchConfig(fc *FetchConfig) error {
 	if fc.Method == "" {
 		fc.Method = http.MethodGet
 	}
+	if fc.TTL == 0 {
+		fc.TTL = 60
+	}
 
 	return nil
 }
 
 // Attempts to get a TTL value from a response's "cache-control" header.
 // Otherwise, the given default TTL is used.
-func getTTLFromResponse(r *http.Response, defaultTTL int) int {
-	var (
-		ttl int
-		err error
-	)
+func getTTLFromResponse(r *http.Response, defaultTTL time.Duration) time.Duration {
+	var ttl time.Duration
 
 	headerKey := http.CanonicalHeaderKey("cache-control")
 	cacheControlValues := r.Header[headerKey]
@@ -150,12 +156,13 @@ func getTTLFromResponse(r *http.Response, defaultTTL int) int {
 
 		if match != "" {
 			maxAgeKeyVal := strings.Split(match, "=")
-			ttl, err = strconv.Atoi(maxAgeKeyVal[1])
+			maxAge, err := strconv.Atoi(maxAgeKeyVal[1])
 			if err != nil {
 				log.Error().
 					Err(err).
 					Msgf("Failed to convert %s to an integer", maxAgeKeyVal[1])
 			}
+			ttl = time.Duration(maxAge) * time.Second
 			break
 		}
 	}
