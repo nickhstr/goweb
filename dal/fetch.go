@@ -25,7 +25,7 @@ var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 
 // FetchConfig holds all the information needed by dal.Fetch() to make a request.
 type FetchConfig struct {
-	*url.URL
+	url.URL
 	// Method describes which request method to use.
 	Method string
 	// Body store the request's body.
@@ -38,21 +38,78 @@ type FetchConfig struct {
 	TTL time.Duration
 }
 
-// Fetch makes a request, and is responsible for caching the response data.
-func Fetch(fc *FetchConfig) ([]byte, error) {
+func (fc *FetchConfig) composeRawQuery() {
+	// URL.RawQuery has higher priority over Query. Only set it if does not
+	// already have a query.
+	if fc.URL.RawQuery == "" {
+		fc.URL.RawQuery = fc.Query.Encode()
+	}
+}
+
+// String reassembles the URL and Query into a valid URL string.
+func (fc *FetchConfig) String() string {
+	fc.composeRawQuery()
+
+	return fc.URL.String()
+}
+
+// Verifies that the given FetchConfig has the basic pieces of information supplied.
+func (fc *FetchConfig) validate() error {
+	if fc == nil {
+		return errors.New("No FetchConfig provided")
+	}
+	if fc.URL == (url.URL{}) ||
+		fc.Scheme == "" ||
+		fc.Host == "" ||
+		fc.Path == "" {
+		return errors.New("Invalid URL config provided")
+	}
+	if fc.Method == "" {
+		fc.Method = http.MethodGet
+	}
+
+	return nil
+}
+
+// NewRequest creates an http.Request from a FetchConfig.
+func (fc *FetchConfig) NewRequest() (*http.Request, error) {
+	var (
+		req *http.Request
+		err error
+	)
+
+	// Create body ready for requests with a non nil body
+	reqBody := bytes.NewBuffer(fc.Body)
+	req, err = http.NewRequest(fc.Method, fc.String(), reqBody)
+	if err != nil {
+		return req, err
+	}
+
+	// Canonicalize the headers
+	if fc.Header != nil {
+		for key, val := range fc.Header {
+			key = http.CanonicalHeaderKey(key)
+			req.Header[key] = val
+		}
+	}
+
+	return req, nil
+}
+
+// Fetch makes a request, and caches its response.
+func Fetch(fc FetchConfig) ([]byte, error) {
 	var (
 		response []byte
 		err      error
 		ttl      = fc.TTL
 	)
 
-	err = validateFetchConfig(fc)
+	err = fc.validate()
 	if err != nil {
 		return response, err
 	}
 
-	fc.composeRawQuery()
-	fetchURL := fc.URL.String()
+	fetchURL := fc.String()
 	start := time.Now()
 
 	// Try to get response from cache
@@ -67,7 +124,7 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 		return cachedResp, nil
 	}
 
-	req, err := createRequest(fc, fetchURL)
+	req, err := fc.NewRequest()
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).
@@ -99,18 +156,7 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 		Bool("redis", false).
 		Msg("DAL request")
 
-	var reader io.ReadCloser
-
-	switch resp.Header.Get(http.CanonicalHeaderKey("content-encoding")) {
-	case "gzip":
-		reader, err = gzip.NewReader(resp.Body)
-		defer reader.Close()
-	default:
-		reader = resp.Body
-	}
-
-	response, err = ioutil.ReadAll(reader)
-
+	respBody, err := getResponseBody(resp)
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).
@@ -120,24 +166,9 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 	}
 
 	// Try to store response in cache
-	cache.Set(fetchURL, response, ttl)
+	cache.Set(fetchURL, respBody, ttl)
 
-	return response, nil
-}
-
-// Verifies that the given FetchConfig has the basic pieces of information supplied.
-func validateFetchConfig(fc *FetchConfig) error {
-	if fc == nil {
-		return errors.New("No FetchConfig provided")
-	}
-	if fc.URL == nil {
-		return errors.New("No URL config provided")
-	}
-	if fc.Method == "" {
-		fc.Method = http.MethodGet
-	}
-
-	return nil
+	return respBody, nil
 }
 
 // Attempts to get a TTL value from a response's "cache-control" header.
@@ -172,34 +203,22 @@ func getTTLFromResponse(r *http.Response) time.Duration {
 	return ttl
 }
 
-func (fc *FetchConfig) composeRawQuery() {
-	// URL.RawQuery has higher priority over Query. Only set it if does not
-	// already have a query.
-	if fc.URL.RawQuery == "" {
-		fc.URL.RawQuery = fc.Query.Encode()
-	}
-}
-
-func createRequest(fc *FetchConfig, fetchURL string) (*http.Request, error) {
+func getResponseBody(resp *http.Response) ([]byte, error) {
 	var (
-		req *http.Request
-		err error
+		reader       io.ReadCloser
+		responseBody []byte
+		err          error
 	)
 
-	// Create body ready for requests with a non nil body
-	reqBody := bytes.NewBuffer(fc.Body)
-	req, err = http.NewRequest(fc.Method, fetchURL, reqBody)
-	if err != nil {
-		return req, err
+	switch resp.Header.Get(http.CanonicalHeaderKey("content-encoding")) {
+	case "gzip":
+		reader, _ = gzip.NewReader(resp.Body)
+		defer reader.Close()
+	default:
+		reader = resp.Body
 	}
 
-	// Canonicalize the headers
-	if fc.Header != nil {
-		for key, val := range fc.Header {
-			key = http.CanonicalHeaderKey(key)
-			req.Header[key] = val
-		}
-	}
+	responseBody, err = ioutil.ReadAll(reader)
 
-	return req, nil
+	return responseBody, err
 }
