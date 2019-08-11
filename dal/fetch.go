@@ -89,7 +89,7 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 	defer resp.Body.Close()
 
 	if fc.TTL == 0 {
-		ttl = getTTLFromResponse(resp, fc.TTL)
+		ttl = getTTLFromResponse(resp)
 	}
 
 	log.Info().
@@ -136,16 +136,13 @@ func validateFetchConfig(fc *FetchConfig) error {
 	if fc.Method == "" {
 		fc.Method = http.MethodGet
 	}
-	if fc.TTL == 0 {
-		fc.TTL = 60
-	}
 
 	return nil
 }
 
 // Attempts to get a TTL value from a response's "cache-control" header.
 // Otherwise, the given default TTL is used.
-func getTTLFromResponse(r *http.Response, defaultTTL time.Duration) time.Duration {
+func getTTLFromResponse(r *http.Response) time.Duration {
 	var ttl time.Duration
 
 	headerKey := http.CanonicalHeaderKey("cache-control")
@@ -168,6 +165,7 @@ func getTTLFromResponse(r *http.Response, defaultTTL time.Duration) time.Duratio
 	}
 
 	if ttl == 0 {
+		defaultTTL := time.Duration(60 * time.Second)
 		ttl = defaultTTL
 	}
 
