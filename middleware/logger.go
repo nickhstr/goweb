@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/nickhstr/goweb/env"
-	"github.com/rs/zerolog/log"
 )
 
 // Used to wrap an http.ResponseWriter to capture the response's status code

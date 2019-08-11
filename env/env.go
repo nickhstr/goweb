@@ -1,20 +1,18 @@
 package env
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/joho/godotenv"
-	"github.com/rs/zerolog/log"
 )
 
 func init() {
 	// Only load variables from .env while in development mode
 	if Dev() {
-		if err := godotenv.Load(); err != nil {
-			log.Warn().Err(err).Msg("Could not load .env file")
-		}
+		_ = godotenv.Load()
 	}
 }
 
@@ -56,15 +54,14 @@ func ServerAddress() string {
 
 // ValidateEnvVars provides a way to check that a given slice of environment
 // variables have been set.
-func ValidateEnvVars(vars []string, shouldPanic bool) {
+func ValidateEnvVars(vars []string) error {
+	var err error
+
 	if vars == nil {
-		return
+		return err
 	}
 
-	var (
-		missingVars = []string{}
-		message     string
-	)
+	missingVars := []string{}
 
 	for _, val := range vars {
 		_, isSet := os.LookupEnv(val)
@@ -74,12 +71,11 @@ func ValidateEnvVars(vars []string, shouldPanic bool) {
 	}
 
 	if len(missingVars) > 0 {
-		message = "Missing required env variables: " + strings.Join(missingVars, ", ")
+		errMsg := fmt.Sprintf("Missing required env variables: %s\n", strings.Join(missingVars, ", "))
+		err = errors.New(errMsg)
 
-		if shouldPanic {
-			panic(message)
-		} else {
-			log.Warn().Msg(message)
-		}
+		return err
 	}
+
+	return err
 }

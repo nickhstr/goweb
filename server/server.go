@@ -8,14 +8,13 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
-	"time"
 
 	"github.com/nickhstr/goweb/env"
-	"github.com/rs/dnscache"
-	"github.com/rs/zerolog/log"
+	"github.com/nickhstr/goweb/logger"
 )
+
+var log = logger.New("server")
 
 // Start creates and starts a server, listening on "address"
 func Start(mux http.Handler) {
@@ -91,43 +90,6 @@ func shutdown(server *http.Server, idleConnectionsClosed chan struct{}) {
 
 	// Close channel to signal shutdown is complete
 	close(idleConnectionsClosed)
-}
-
-// DNSCache adds caching to dns lookups, performed by the standard library's http.DefaultClient.
-// TTL in this case doesn't truly mean TTL for an address; rather, it determines the number of
-// seconds to use for the cache refresh interval.
-func DNSCache(enable bool, ttl int) {
-	if !enable {
-		return
-	}
-
-	r := &dnscache.Resolver{}
-	http.DefaultTransport.(*http.Transport).
-		DialContext = func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
-		separator := strings.LastIndex(addr, ":")
-		ips, err := r.LookupHost(ctx, addr[:separator])
-		if err != nil {
-			return nil, err
-		}
-
-		for _, ip := range ips {
-			conn, err = net.Dial(network, ip+addr[separator:])
-			if err == nil {
-				break
-			}
-		}
-		return
-	}
-
-	// Run refresh job in background
-	go func() {
-		t := time.NewTicker(time.Duration(ttl) * time.Second)
-		defer t.Stop()
-		for range t.C {
-			// Use true to refresh addresses not used since the last refresh
-			r.Refresh(true)
-		}
-	}()
 }
 
 // PreferredListener will attempt to create a listener for the given address.

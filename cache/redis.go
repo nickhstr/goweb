@@ -16,7 +16,7 @@ type redisClient interface {
 }
 
 // var logger = log.With().Str("namespace", "redis").Logger()
-var log = logger.New(nil).With().Str("namespace", "redis").Logger()
+var log = logger.New("redis")
 var redisInstance redisClient
 
 // Get returns the data stored under the given key.

@@ -18,9 +18,9 @@ import (
 	"github.com/nickhstr/goweb/logger"
 )
 
-var log = logger.New(nil).With().Str("namespace", "dal").Logger()
+var log = logger.New("dal")
 
-// Use for getTTLFromResponse
+// Used for getTTLFromResponse
 var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 
 // FetchConfig holds all the information needed by dal.Fetch() to make a request.

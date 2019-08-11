@@ -8,13 +8,17 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/logger"
+	"github.com/rs/zerolog"
 	"github.com/unrolled/secure"
 )
 
 var startTime time.Time
+var log zerolog.Logger
 
 func init() {
 	startTime = time.Now()
+	log = logger.New("middleware")
 }
 
 func uptime() time.Duration {
@@ -57,7 +61,11 @@ func Create(config Config) http.Handler {
 		middleware = []Middleware{}
 	)
 
-	env.ValidateEnvVars(config.EnvVarsToValidate, true)
+	err := env.ValidateEnvVars(config.EnvVarsToValidate)
+	if err != nil {
+		// Log invalid env vars and exit
+		log.Fatal().Err(err).Msg("Invalid environment variables")
+	}
 
 	if config.Auth {
 		secretKey := env.Get("SECRET_KEY")
