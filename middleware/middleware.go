@@ -3,19 +3,22 @@ package middleware
 import (
 	"crypto/md5"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/logger"
+	"github.com/rs/zerolog"
 	"github.com/unrolled/secure"
 )
 
 var startTime time.Time
+var log zerolog.Logger
 
 func init() {
 	startTime = time.Now()
+	log = logger.New("middleware")
 }
 
 func uptime() time.Duration {
@@ -60,7 +63,8 @@ func Create(config Config) http.Handler {
 
 	err := env.ValidateEnvVars(config.EnvVarsToValidate)
 	if err != nil {
-		log.Fatal(err.Error())
+		// Log invalid env vars and exit
+		log.Fatal().Err(err).Msg("Invalid environment variables")
 	}
 
 	if config.Auth {

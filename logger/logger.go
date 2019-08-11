@@ -8,13 +8,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// See https://golang.org/pkg/time/#pkg-constants for time layout rules
-const devTimeFormat = "2006/01/2 15:04:05"
-
 var rootLogger zerolog.Logger
 
 func init() {
-	rootLogger = zerolog.New(os.Stdout).
+	rootLogger = zerolog.New(getOutput()).
 		With().
 		Timestamp().
 		Logger()
@@ -47,10 +44,12 @@ func getLevel(logLevel string) zerolog.Level {
 }
 
 func getOutput() io.Writer {
+	// See https://golang.org/pkg/time/#pkg-constants for time layout rules
+	const devTimeFormat = "2006/01/2 15:04:05"
 	var out io.Writer
 
 	if !env.Prod() {
-		out = zerolog.ConsoleWriter{Out: os.Stdout}
+		out = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: devTimeFormat}
 	} else {
 		out = os.Stdout
 	}

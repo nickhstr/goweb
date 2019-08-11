@@ -2,8 +2,6 @@ package env
 
 import (
 	"os"
-
-	"github.com/rs/zerolog/log"
 )
 
 // DefaultAppName is the app's default name, set to the "GO_ENV" environment variable
@@ -25,9 +23,7 @@ func AppName(defaultNames ...string) string {
 		name = DefaultAppName
 	}
 
-	if err := os.Setenv("APP_NAME", name); err != nil {
-		log.Warn().Msg("Unable to set env var 'APP_NAME'")
-	}
+	_ = os.Setenv("APP_NAME", name)
 
 	return name
 }

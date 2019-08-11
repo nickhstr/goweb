@@ -6,7 +6,6 @@ import (
 	"runtime/debug"
 
 	"github.com/nickhstr/goweb/env"
-	"github.com/rs/zerolog/log"
 )
 
 // Recover middleware recovers from panics, and logs the error.
