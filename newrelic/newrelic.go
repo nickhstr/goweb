@@ -1,7 +1,6 @@
 package newrelic
 
 import (
-	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,7 +9,6 @@ import (
 	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -22,6 +20,7 @@ func init() {
 	enabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_ENABLED", "false"))
 	appName := env.Get("NEW_RELIC_APP_NAME")
 	license := env.Get("NEW_RELIC_LICENSE_KEY")
+	log := logger.New("newrelic")
 
 	if !enabled {
 		return
@@ -98,27 +97,17 @@ func (l *nrLogger) DebugEnabled() bool {
 }
 
 // newLogger returns a custom logger which satisfies the newrelic Logger interface.
-func newLogger(w io.Writer) nr.Logger {
+func newLogger() nr.Logger {
 	logLevel := env.Get("NEW_RELIC_LOG_LEVEL", "error")
+	log := logger.NewWithLevel("newrelic", logLevel)
 
-	zlog := logger.New(&logger.Config{Level: logLevel})
-
-	return &nrLogger{zlog}
+	return &nrLogger{log}
 }
 
 func setupLog(c *nr.Config) {
 	logEnabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_LOG_ENABLED", "false"))
 
 	if logEnabled {
-		logOut := env.Get("NEW_RELIC_LOG", "stdout")
-
-		switch logOut {
-		case "stderr":
-			c.Logger = newLogger(os.Stderr)
-		case "stdout":
-			fallthrough
-		default:
-			c.Logger = newLogger(os.Stdout)
-		}
+		c.Logger = newLogger()
 	}
 }

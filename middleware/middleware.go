@@ -3,6 +3,7 @@ package middleware
 import (
 	"crypto/md5"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -57,7 +58,10 @@ func Create(config Config) http.Handler {
 		middleware = []Middleware{}
 	)
 
-	env.ValidateEnvVars(config.EnvVarsToValidate, true)
+	err := env.ValidateEnvVars(config.EnvVarsToValidate)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	if config.Auth {
 		secretKey := env.Get("SECRET_KEY")

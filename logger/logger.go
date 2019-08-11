@@ -6,39 +6,33 @@ import (
 
 	"github.com/nickhstr/goweb/env"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 // See https://golang.org/pkg/time/#pkg-constants for time layout rules
 const devTimeFormat = "2006/01/2 15:04:05"
 
+var rootLogger zerolog.Logger
+
 func init() {
-	logLevel := env.Get("LOG_LEVEL")
-	goEnv := env.Get("GO_ENV")
-	// Set to empty string to use UNIX time; UNIX timestamps are shorter
-	// and faster.
-	zerolog.TimeFieldFormat = ""
-	setGlobalLevel(logLevel, goEnv)
-	log.Logger = log.Output(os.Stdout)
+	rootLogger = zerolog.New(os.Stdout).
+		With().
+		Timestamp().
+		Logger()
+}
 
-	if !env.Prod() {
-		zerolog.TimeFieldFormat = devTimeFormat
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+func getLevel(logLevel string) zerolog.Level {
+	if logLevel == "" {
+		logLevel = env.Get("LOG_LEVEL")
 	}
-}
 
-func setGlobalLevel(logLevel, goEnv string) {
-	level := getLevel(logLevel, goEnv)
-	zerolog.SetGlobalLevel(level)
-}
-
-func getLevel(logLevel, goEnv string) zerolog.Level {
 	if logLevel != "" {
 		level, err := zerolog.ParseLevel(logLevel)
 		if err == nil {
 			return level
 		}
 	}
+
+	goEnv := env.Get("GO_ENV")
 
 	switch goEnv {
 	case "development":
@@ -52,41 +46,38 @@ func getLevel(logLevel, goEnv string) zerolog.Level {
 	}
 }
 
-// Config provides options for logger.New().
-type Config struct {
-	Out io.Writer
-	// Level allows new loggers to log at their own level.
-	// However, there is one caveat: if the zerolog global level is set higher
-	// than this level, log messages will be logged at the global level instead.
-	Level string
+func getOutput() io.Writer {
+	var out io.Writer
+
+	if !env.Prod() {
+		out = zerolog.ConsoleWriter{Out: os.Stdout}
+	} else {
+		out = os.Stdout
+	}
+
+	return out
 }
 
-// New creates a new zerolog.Logger.
-func New(c *Config) zerolog.Logger {
-	var (
-		goEnv      = env.Get("GO_ENV")
-		defaultOut = os.Stdout
-		logger     zerolog.Logger
-	)
+// New creates a new child logger.
+func New(namespace string) zerolog.Logger {
+	logger := createLogger(namespace, "")
 
-	if c == nil {
-		c = &Config{}
-	}
-	if c.Out == nil {
-		c.Out = defaultOut
-	}
-	if !env.Prod() {
-		c.Out = zerolog.ConsoleWriter{Out: os.Stdout}
-	}
+	return logger
+}
 
-	zLevel := getLevel(c.Level, goEnv)
+// NewWithLevel creates a new child logger with the specified level and output.
+func NewWithLevel(namespace, logLevel string) zerolog.Logger {
+	logger := createLogger(namespace, logLevel)
 
-	logger = zerolog.
-		New(c.Out).
+	return logger
+}
+
+func createLogger(namespace, logLevel string) zerolog.Logger {
+	logger := rootLogger.
+		Level(getLevel(logLevel)).
 		With().
-		Timestamp().
-		Logger().
-		Level(zLevel)
+		Str("namespace", namespace).
+		Logger()
 
 	return logger
 }

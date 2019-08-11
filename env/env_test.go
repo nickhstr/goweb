@@ -86,20 +86,20 @@ func TestEnvVarsToValidate(t *testing.T) {
 	c.Convey("Given environment variables to validate", t, func() {
 		vars := []string{"GO_ENV", "LOG_LEVEL"}
 
-		c.Convey("When they are set, and shouldPanic is true", func() {
+		c.Convey("When they are set", func() {
 			os.Setenv("GO_ENV", "test")
 			os.Setenv("LOG_LEVEL", "debug")
 
 			c.Convey("The variables should be valid", func() {
-				c.So(func() { env.ValidateEnvVars(vars, true) }, c.ShouldNotPanic)
+				c.So(env.ValidateEnvVars(vars), c.ShouldBeNil)
 			})
 		})
 
-		c.Convey("When one or more are not set, and shouldPanic is true", func() {
+		c.Convey("When one or more are not set", func() {
 			os.Unsetenv("GO_ENV")
 
-			c.Convey("ValidateEnvVars should panic", func() {
-				c.So(func() { env.ValidateEnvVars(vars, true) }, c.ShouldPanic)
+			c.Convey("ValidateEnvVars should return an error", func() {
+				c.So(env.ValidateEnvVars(vars), c.ShouldBeError)
 			})
 		})
 	})
@@ -107,7 +107,7 @@ func TestEnvVarsToValidate(t *testing.T) {
 	c.Convey("Given no variables to validate", t, func() {
 		c.Convey("When a nil slice is passed to ValidateEnvVars", func() {
 			c.Convey("It should do nothing", func() {
-				c.So(func() { env.ValidateEnvVars(nil, true) }, c.ShouldNotPanic)
+				c.So(env.ValidateEnvVars(nil), c.ShouldBeNil)
 			})
 		})
 	})
