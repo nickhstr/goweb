@@ -3,13 +3,21 @@ A collection of reusable Go packages for web development. The goal is to remain 
 and idiomatic, while adhering to the standard library's APIs when possible.
 
 ## Installation
+### Using GOPATH:
 `go get -u github.com/nickhstr/goweb`
+### Using Modules:
+`go get github.com/nickhstr/goweb`
+
+or with specific version:
+
+`go get github.com/nickhstr/goweb@0.6.0`
 
 ## Features
 * General middleware
 * Configurable logger - built on github.com/rs/zerolog
 * Router - routes registration with github.com/go-chi/chi
 * Server - dns lookup caching and automatic port resolution
-* Data access layer - request client with redis
+* Data access layer - request client
+* Cache - a key-value cache, using Redis
 * Newrelic - handler wrapper and custom logging, using github.com/newrelic/go-agent
 * Environment variable helpers
