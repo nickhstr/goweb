@@ -58,11 +58,14 @@ func (fc *FetchConfig) validate() error {
 	if fc == nil {
 		return errors.New("No FetchConfig provided")
 	}
-	if fc.URL == (url.URL{}) ||
-		fc.Scheme == "" ||
-		fc.Host == "" ||
-		fc.Path == "" {
-		return errors.New("Invalid URL config provided")
+	if fc.URL == (url.URL{}) {
+		return errors.New("Empty URL config provided")
+	}
+	if fc.Scheme == "" {
+		return errors.New("No Scheme provided")
+	}
+	if fc.Host == "" {
+		return errors.New("No Host provided")
 	}
 	if fc.Method == "" {
 		fc.Method = http.MethodGet
