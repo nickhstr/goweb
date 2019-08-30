@@ -3,6 +3,7 @@ package cache
 import (
 	"errors"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -15,29 +16,30 @@ type redisClient interface {
 	Set(string, interface{}, time.Duration) *redis.StatusCmd
 }
 
-// var logger = log.With().Str("namespace", "redis").Logger()
 var log = logger.New("redis")
-var redisInstance redisClient
+var client redisClient
+var clientInit sync.Once
 
 // Get returns the data stored under the given key.
 func Get(key string) ([]byte, error) {
+	clientInit.Do(clientSetup)
+
 	var (
 		data []byte
 		err  error
 	)
 
-	redis := getRedis()
-	if redis == nil {
+	if client == nil {
 		err = errors.New("No redis client available")
 		log.Warn().Str("operation", "GET").Msg(err.Error())
 
 		return []byte{}, err
 	}
 
-	data, err = redis.Get(key).Bytes()
+	data, err = client.Get(key).Bytes()
 	if err != nil {
 		if err.Error() == "redis: nil" {
-			log.Warn().
+			log.Debug().
 				Str("operation", "GET").
 				Str("key", key).
 				Msg("Key not found")
@@ -61,8 +63,9 @@ func Get(key string) ([]byte, error) {
 
 // Set stores data for a set period of time at the given key.
 func Set(key string, data []byte, expiration time.Duration) {
-	redis := getRedis()
-	if redis == nil {
+	clientInit.Do(clientSetup)
+
+	if client == nil {
 		log.Warn().
 			Str("operation", "SET").
 			Msg("No redis client available")
@@ -70,7 +73,7 @@ func Set(key string, data []byte, expiration time.Duration) {
 		return
 	}
 
-	_, err := redis.Set(key, data, expiration).Result()
+	_, err := client.Set(key, data, expiration).Result()
 	if err != nil {
 		log.Error().
 			Str("operation", "SET").
@@ -79,7 +82,7 @@ func Set(key string, data []byte, expiration time.Duration) {
 	}
 }
 
-func getRedis() redisClient {
+func clientSetup() {
 	if env.Get("REDIS_HOST") == "" ||
 		env.Get("REDIS_PORT") == "" ||
 		env.Get("REDIS_MODE") == "" {
@@ -89,11 +92,7 @@ func getRedis() redisClient {
 			Str("redis-mode", env.Get("REDIS_MODE")).
 			Msg("Environment variable(s) not set")
 
-		return nil
-	}
-
-	if redisInstance != nil {
-		return redisInstance
+		return
 	}
 
 	addr := env.Get("REDIS_HOST", "localhost") + ":" + env.Get("REDIS_PORT", "6379")
@@ -118,7 +117,7 @@ func getRedis() redisClient {
 			MaxRetryBackoff: maxRetryBackoff,
 			OnConnect:       onConnect,
 		}
-		redisInstance = redis.NewClusterClient(clusterOptions)
+		client = redis.NewClusterClient(clusterOptions)
 	case "server":
 		fallthrough
 	default:
@@ -129,8 +128,6 @@ func getRedis() redisClient {
 			MaxRetryBackoff: maxRetryBackoff,
 			OnConnect:       onConnect,
 		}
-		redisInstance = redis.NewClient(options)
+		client = redis.NewClient(options)
 	}
-
-	return redisInstance
 }
