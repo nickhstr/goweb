@@ -128,7 +128,7 @@ func FreePortListener() net.Listener {
 func Host() string {
 	var defaultHost string
 
-	if env.Dev() {
+	if env.IsDev() {
 		defaultHost = "localhost"
 	} else {
 		defaultHost = "0.0.0.0"

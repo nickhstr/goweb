@@ -29,25 +29,14 @@ func Get(envVar string, defaultVal ...string) string {
 	return ""
 }
 
-// Dev indicates if app is in dev env.
-func Dev() bool {
+// IsDev indicates if app is in dev env.
+func IsDev() bool {
 	return Get("GO_ENV", "development") == "development"
 }
 
-// Prod indicates if app is in prod env.
-func Prod() bool {
+// IsProd indicates if app is in prod env.
+func IsProd() bool {
 	return Get("GO_ENV", "development") == "production"
-}
-
-// ServerAddress returns an appropriate address for http.ListenAndServe to use.
-func ServerAddress() string {
-	port := Get("PORT", "3000")
-
-	if Dev() {
-		return fmt.Sprintf("localhost:%s", port)
-	}
-
-	return fmt.Sprintf("0.0.0.0:%s", port)
 }
 
 // ValidateEnvVars provides a way to check that a given slice of environment

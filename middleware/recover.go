@@ -19,7 +19,7 @@ func Recover(handler http.Handler) http.Handler {
 					Bytes("stacktrace", stack).
 					Msg(errMsg)
 
-				if env.Prod() {
+				if env.IsProd() {
 					http.Error(w, errMsg, http.StatusInternalServerError)
 					return
 				}

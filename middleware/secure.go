@@ -10,7 +10,7 @@ import (
 // Secure creates the security middleware
 func Secure(options secure.Options) Middleware {
 	return func(handler http.Handler) http.Handler {
-		if !env.Prod() {
+		if !env.IsProd() {
 			options.IsDevelopment = true
 		}
 

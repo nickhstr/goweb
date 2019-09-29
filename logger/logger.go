@@ -48,7 +48,7 @@ func getOutput() io.Writer {
 	const devTimeFormat = "2006/01/2 15:04:05"
 	var out io.Writer
 
-	if !env.Prod() {
+	if !env.IsProd() {
 		out = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: devTimeFormat}
 	} else {
 		out = os.Stdout
