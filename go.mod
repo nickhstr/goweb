@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/handlers v1.4.2
 	github.com/joho/godotenv v1.3.0
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/newrelic/go-agent v2.10.0+incompatible
+	github.com/newrelic/go-agent v2.13.0+incompatible
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
