@@ -42,13 +42,14 @@ func IsProd() bool {
 // ValidateEnvVars provides a way to check that a given slice of environment
 // variables have been set.
 func ValidateEnvVars(vars []string) error {
-	var err error
+	var (
+		missingVars []string
+		err         error
+	)
 
 	if vars == nil {
 		return err
 	}
-
-	missingVars := []string{}
 
 	for _, val := range vars {
 		_, isSet := os.LookupEnv(val)

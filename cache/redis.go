@@ -12,6 +12,7 @@ import (
 )
 
 type redisClient interface {
+	Del(...string) *redis.IntCmd
 	Get(string) *redis.StringCmd
 	Set(string, interface{}, time.Duration) *redis.StatusCmd
 }
@@ -19,6 +20,30 @@ type redisClient interface {
 var log = logger.New("redis")
 var client redisClient
 var clientInit sync.Once
+
+// Del removes data at the given key(s)
+func Del(keys ...string) error {
+	clientInit.Do(clientSetup)
+
+	var err error
+
+	if client == nil {
+		err = errors.New("No redis client available")
+		log.Warn().Str("operation", "GET").Msg(err.Error())
+
+		return err
+	}
+
+	_, err = client.Del(keys...).Result()
+	if err != nil {
+		log.Error().
+			Str("operation", "SET").
+			Err(err).
+			Msg(err.Error())
+	}
+
+	return err
+}
 
 // Get returns the data stored under the given key.
 func Get(key string) ([]byte, error) {
@@ -97,7 +122,7 @@ func clientSetup() {
 
 	addr := env.Get("REDIS_HOST", "localhost") + ":" + env.Get("REDIS_PORT", "6379")
 	mode := env.Get("REDIS_MODE", "server")
-	maxRetries := 2
+	maxRetries := 1
 	minRetryBackoff := 8 * time.Millisecond
 	maxRetryBackoff := 512 * time.Millisecond
 	onConnect := func(c *redis.Conn) error {
