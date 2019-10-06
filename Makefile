@@ -8,7 +8,7 @@ all: help
 create-coverage:
 	@echo "🏃 Running tests and creating coverage report..."
 	@GO_ENV=test go test -race -coverprofile=coverage.out ./...
-	@echo "👍 Done."
+	@echo "✅ Done."
 
 ## coverage: Runs tests and reports coverage
 .PHONY: coverage
@@ -20,21 +20,19 @@ coverage: create-coverage
 ## coverage-html: Runs tests and opens a browser window to visualize test coverage
 .PHONY: coverage-html
 coverage-html: create-coverage
-	@echo "🛠  Opening coverage report in browser..."
+	@echo "Opening coverage report in browser..."
 	@go tool cover -html=coverage.out
-	@echo "👍 Done."
 
 ## lint: Runs golangci-lint against entire project
 .PHONY: lint
 lint:
-	@echo "🔍  Linting files..."
+	@echo "🔍 Linting files..."
 	@golangci-lint run
-	@echo "👍 Done."
+	@echo "✨ Done."
 
 ## install: Downloads all app dependencies
 .PHONY: install
 install:
-	@echo "🛠  Installing package dependencies..."
 	@go mod download
 	@echo "👍 Done."
 
@@ -43,7 +41,7 @@ install:
 test:
 	@echo "🏃 Running all tests..."
 	GO_ENV=test go test -race ./...
-	@echo "👍 Done."
+	@echo "✅ Done."
 
 ## help: List available commands
 .PHONY: help
