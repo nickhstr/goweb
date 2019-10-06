@@ -25,7 +25,7 @@ func Recover(handler http.Handler) http.Handler {
 				}
 
 				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "<h1>panic: %v</h1><pre>%s</pre>", err, string(stack))
+				fmt.Fprintf(w, "<h1>panic: %v</h1><pre>%s</pre>", err, stack)
 			}
 		}()
 
