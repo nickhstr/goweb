@@ -20,9 +20,6 @@ import (
 
 var log = logger.New("dal")
 
-// Used for getTTLFromResponse
-var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
-
 // FetchConfig holds all the information needed by dal.Fetch() to make a request.
 type FetchConfig struct {
 	url.URL
@@ -36,6 +33,10 @@ type FetchConfig struct {
 	Query url.Values
 	// TTL is the time to live for a request's response in cache
 	TTL time.Duration
+	// CacheKey offers an optional key to use in place of the default key.
+	// When defined, the response body of the request will be cached, no
+	// matter the Method used.
+	CacheKey string
 }
 
 func (fc *FetchConfig) composeRawQuery() {
@@ -70,6 +71,11 @@ func (fc *FetchConfig) validate() error {
 	if fc.Method == "" {
 		fc.Method = http.MethodGet
 	}
+	if fc.CacheKey == "" && fc.Method == http.MethodGet {
+		// Only set CacheKey when not already provided and the method is GET
+		// Otherwise, leave empty to avoid using the cache
+		fc.CacheKey = "dal:" + fc.String()
+	}
 
 	return nil
 }
@@ -100,6 +106,8 @@ func (fc *FetchConfig) NewRequest() (*http.Request, error) {
 }
 
 // Fetch makes a request, and caches its response.
+// By default, the cache is only used for GET requests. For all
+// other methods, fc.CacheKey must be defined
 func Fetch(fc FetchConfig) ([]byte, error) {
 	var (
 		response []byte
@@ -116,7 +124,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 	start := time.Now()
 
 	// Try to get response from cache
-	cachedResp, err := cache.Get(fetchURL)
+	cachedResp, err := cache.Get(fc.CacheKey)
 	if err == nil {
 		log.Info().
 			Str("url", fetchURL).
@@ -145,8 +153,6 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 			Msg(err.Error())
 		return response, err
 	}
-	// Make sure to always close body
-	defer resp.Body.Close()
 
 	if fc.TTL == 0 {
 		ttl = getTTLFromResponse(resp)
@@ -169,10 +175,13 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 	}
 
 	// Try to store response in cache
-	cache.Set(fetchURL, respBody, ttl)
+	cache.Set(fc.CacheKey, respBody, ttl)
 
 	return respBody, nil
 }
+
+// Used for getTTLFromResponse
+var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 
 // Attempts to get a TTL value from a response's "cache-control" header.
 // Otherwise, the given default TTL is used.
@@ -207,21 +216,17 @@ func getTTLFromResponse(r *http.Response) time.Duration {
 }
 
 func getResponseBody(resp *http.Response) ([]byte, error) {
-	var (
-		reader       io.ReadCloser
-		responseBody []byte
-		err          error
-	)
+	var reader io.ReadCloser
 
 	switch resp.Header.Get(http.CanonicalHeaderKey("content-encoding")) {
 	case "gzip":
 		reader, _ = gzip.NewReader(resp.Body)
-		defer reader.Close()
 	default:
 		reader = resp.Body
 	}
 
-	responseBody, err = ioutil.ReadAll(reader)
+	// Make sure to always close response reader
+	defer reader.Close()
 
-	return responseBody, err
+	return ioutil.ReadAll(reader)
 }
