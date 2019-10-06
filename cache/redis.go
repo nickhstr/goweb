@@ -29,14 +29,14 @@ func Del(keys ...string) error {
 
 	if client == nil {
 		err = errors.New("No redis client available")
-		log.Warn().Str("operation", "GET").Msg(err.Error())
+		log.Error().Str("operation", "GET").Msg(err.Error())
 
 		return err
 	}
 
 	_, err = client.Del(keys...).Result()
 	if err != nil {
-		log.Error().
+		log.Warn().
 			Str("operation", "SET").
 			Err(err).
 			Msg(err.Error())
@@ -56,7 +56,7 @@ func Get(key string) ([]byte, error) {
 
 	if client == nil {
 		err = errors.New("No redis client available")
-		log.Warn().Str("operation", "GET").Msg(err.Error())
+		log.Error().Str("operation", "GET").Msg(err.Error())
 
 		return []byte{}, err
 	}
@@ -75,7 +75,7 @@ func Get(key string) ([]byte, error) {
 				Err(err).
 				Msg("Redis unavailable")
 		} else {
-			log.Error().
+			log.Warn().
 				Str("operation", "GET").
 				Str("key", key).
 				Err(err).
@@ -91,7 +91,7 @@ func Set(key string, data []byte, expiration time.Duration) {
 	clientInit.Do(clientSetup)
 
 	if client == nil {
-		log.Warn().
+		log.Error().
 			Str("operation", "SET").
 			Msg("No redis client available")
 
@@ -100,7 +100,7 @@ func Set(key string, data []byte, expiration time.Duration) {
 
 	_, err := client.Set(key, data, expiration).Result()
 	if err != nil {
-		log.Error().
+		log.Warn().
 			Str("operation", "SET").
 			Err(err).
 			Msg(err.Error())
