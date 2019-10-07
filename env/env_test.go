@@ -38,8 +38,7 @@ func TestIsProd(t *testing.T) {
 
 	Convey("Given a GO_ENV variable", t, func() {
 		Convey("When the variable is set to 'production'", func() {
-			goEnvVal := "production"
-			os.Setenv(goEnv, goEnvVal)
+			os.Setenv(goEnv, "production")
 
 			Convey("It should return true", func() {
 				isProd := env.IsProd()

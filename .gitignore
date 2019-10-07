@@ -140,3 +140,4 @@ $RECYCLE.BIN/
 .golangci-*
 .golangcilint-*
 .gometalinter-*
+bin/

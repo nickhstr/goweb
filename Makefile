@@ -33,7 +33,9 @@ lint:
 ## install: Downloads all app dependencies
 .PHONY: install
 install:
-	@go mod download
+	go mod download
+	go install github.com/cortesi/modd/cmd/modd
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint
 	@echo "👍 Done."
 
 ## test: Runs all tests
@@ -42,6 +44,12 @@ test:
 	@echo "🏃 Running all tests..."
 	GO_ENV=test go test -race ./...
 	@echo "✅ Done."
+
+## test: Runs tests and watches for changes
+.PHONY: test-watch
+test-watch:
+	@echo "🏃 Running test watcher..."
+	GO_ENV=test modd --file=./modd.conf
 
 ## help: List available commands
 .PHONY: help
