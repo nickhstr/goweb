@@ -1,7 +1,12 @@
 linters:
   fast: true
   enable:
+    - dogsled
+    - dupl
+    - goconst
     - golint
+    - prealloc
+    - unconvert
     - unused
 
 issues:
