@@ -49,7 +49,7 @@ test:
 .PHONY: test-watch
 test-watch:
 	@echo "🏃 Running test watcher..."
-	GO_ENV=test modd --file=./modd.conf
+	GO_ENV=test modd --file=./internal/tools/modd.test.conf
 
 ## help: List available commands
 .PHONY: help
