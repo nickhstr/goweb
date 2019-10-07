@@ -28,7 +28,7 @@ func Del(keys ...string) error {
 	var err error
 
 	if client == nil {
-		err = errors.New("No redis client available")
+		err = errors.New("no redis client available")
 		log.Error().Str("operation", "GET").Msg(err.Error())
 
 		return err
@@ -55,7 +55,7 @@ func Get(key string) ([]byte, error) {
 	)
 
 	if client == nil {
-		err = errors.New("No redis client available")
+		err = errors.New("no redis client available")
 		log.Error().Str("operation", "GET").Msg(err.Error())
 
 		return []byte{}, err

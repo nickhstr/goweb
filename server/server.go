@@ -100,7 +100,7 @@ func PreferredListener(addr string) (net.Listener, error) {
 	)
 
 	if addr == "" {
-		return nil, errors.New("Address must be a non-empty string")
+		return nil, errors.New("address must be a non-empty string")
 	}
 
 	listener, err = net.Listen("tcp", addr)

@@ -11,7 +11,7 @@ import (
 
 func TestErrorResponse(t *testing.T) {
 	c.Convey("Given an error", t, func() {
-		errMsg := "Something has gone horribly wrong"
+		errMsg := "something has gone horribly wrong"
 		newErr := errors.New(errMsg)
 
 		c.Convey("When it needs to be marshaled", func() {

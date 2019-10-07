@@ -59,7 +59,7 @@ func ValidateEnvVars(vars []string) error {
 	}
 
 	if len(missingVars) > 0 {
-		errMsg := fmt.Sprintf("Missing required env variables: %s\n", strings.Join(missingVars, ", "))
+		errMsg := fmt.Sprintf("missing required env variables: %s\n", strings.Join(missingVars, ", "))
 		err = errors.New(errMsg)
 
 		return err

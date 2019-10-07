@@ -57,16 +57,16 @@ func (fc *FetchConfig) String() string {
 // Verifies that the given FetchConfig has the basic pieces of information supplied.
 func (fc *FetchConfig) validate() error {
 	if fc == nil {
-		return errors.New("No FetchConfig provided")
+		return errors.New("no FetchConfig provided")
 	}
 	if fc.URL == (url.URL{}) {
-		return errors.New("Empty URL config provided")
+		return errors.New("empty URL config provided")
 	}
 	if fc.Scheme == "" {
-		return errors.New("No Scheme provided")
+		return errors.New("no Scheme provided")
 	}
 	if fc.Host == "" {
-		return errors.New("No Host provided")
+		return errors.New("no Host provided")
 	}
 	if fc.Method == "" {
 		fc.Method = http.MethodGet
@@ -208,7 +208,7 @@ func getTTLFromResponse(r *http.Response) time.Duration {
 	}
 
 	if ttl == 0 {
-		defaultTTL := time.Duration(60 * time.Second)
+		defaultTTL := 60 * time.Second
 		ttl = defaultTTL
 	}
 

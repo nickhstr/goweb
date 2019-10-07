@@ -58,7 +58,7 @@ type Config struct {
 func Create(config Config) http.Handler {
 	var (
 		healthPath = fmt.Sprintf("/%s/health", config.AppName)
-		middleware = []Middleware{}
+		middleware []Middleware
 	)
 
 	err := env.ValidateEnvVars(config.EnvVarsToValidate)

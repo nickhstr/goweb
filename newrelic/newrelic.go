@@ -28,7 +28,7 @@ func init() {
 		log.Error().
 			Str("app", appName).
 			Str("license", license).
-			Msg("Missing newrelic options")
+			Msg("missing newrelic options")
 	} else if appName != "" && license != "" {
 		config = nr.NewConfig(appName, license)
 		setupLog(&config)
@@ -37,7 +37,7 @@ func init() {
 		if app, err = nr.NewApplication(config); err != nil {
 			log.Error().
 				Err(err).
-				Msg("Failed to create newrelic application")
+				Msg("failed to create newrelic application")
 			os.Exit(1)
 		}
 	}
