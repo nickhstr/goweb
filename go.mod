@@ -1,6 +1,6 @@
 module github.com/nickhstr/goweb
 
-go 1.12
+go 1.13
 
 require (
 	github.com/cortesi/modd v0.0.0-20190816110347-45e41bb091af
