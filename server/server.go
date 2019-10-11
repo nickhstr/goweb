@@ -42,7 +42,7 @@ func Start(mux http.Handler) {
 			Msg("Failed to convert 'DNS_CACHE_ENABLED' to bool")
 	}
 	// TTL measured in seconds
-	dnsCacheTTTL, err := strconv.Atoi(env.Get("DNS_CACHE_TTL", "300"))
+	dnsCacheTTL, err := strconv.Atoi(env.Get("DNS_CACHE_TTL", "300"))
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -50,7 +50,7 @@ func Start(mux http.Handler) {
 	}
 	DNSCache(
 		dnsCacheEnabled,
-		dnsCacheTTTL,
+		dnsCacheTTL,
 	)
 
 	srv := &http.Server{Handler: mux}
