@@ -10,6 +10,7 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20190430165422-3e4dfb77656c // indirect
 	github.com/gorilla/handlers v1.4.2
 	github.com/joho/godotenv v1.3.0
+	github.com/magefile/mage v1.9.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/newrelic/go-agent v2.13.0+incompatible

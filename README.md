@@ -3,14 +3,10 @@ A collection of reusable Go packages for web development. The goal is to remain 
 and idiomatic, while adhering to the standard library's APIs when possible.
 
 ## Installation
-### Using GOPATH:
-`go get -u github.com/nickhstr/goweb`
-### Using Modules:
 `go get github.com/nickhstr/goweb`
 
-or with specific version:
+Note: Go modules are the only supported dependency tool.
 
-`go get github.com/nickhstr/goweb@0.6.0`
 
 ## Features
 * General middleware
@@ -21,3 +17,17 @@ or with specific version:
 * Cache - a key-value cache, using Redis
 * Newrelic - handler wrapper and custom logging, using github.com/newrelic/go-agent
 * Environment variable helpers
+
+## Contributors
+
+### Setup
+Install `mage`:
+
+`go install github.com/magefile/mage`
+
+Install dependencies:
+
+`mage` or `mage install`
+
+### Workflow
+Run `mage -l` to view the available common tasks, such as linting, testing, etc.
