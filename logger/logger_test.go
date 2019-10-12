@@ -4,24 +4,24 @@ import (
 	"testing"
 
 	"github.com/nickhstr/goweb/logger"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNew(t *testing.T) {
-	Convey("A new logger should be created with default settings", t, func() {
-		log := logger.New("test")
+	assert := assert.New(t)
 
-		// The *zerolog.Event returned from log.Info() should be nil, as the
-		// default level is Error when the level is not specified.
-		So(log.Info(), ShouldBeNil)
-		So(log.Error(), ShouldNotBeNil)
-	})
+	log := logger.New("test")
+
+	// The *zerolog.Event returned from log.Info() should be nil, as the
+	// default level is Error when the level is not specified.
+	assert.Nil(log.Info(), "info log event should be nil by default")
+	assert.NotNil(log.Error(), "error log event should be non-nil by default")
 }
 
 func TestNewWithLevel(t *testing.T) {
-	Convey("A new logger should log at the given level", t, func() {
-		log := logger.NewWithLevel("test", "info")
+	assert := assert.New(t)
 
-		So(log.Info(), ShouldNotBeNil)
-	})
+	log := logger.NewWithLevel("test", "info")
+
+	assert.NotNil(log.Info, "a new logger should log at given level")
 }

@@ -17,7 +17,7 @@ type AuthConfig struct {
 func Auth(config AuthConfig) Middleware {
 	var (
 		defaultAPIKeyName   = "apiKey"
-		defaultErrorMessage = "Invalid api key supplied"
+		defaultErrorMessage = "invalid API key supplied"
 	)
 
 	if config.APIKeyName == "" {
@@ -37,28 +37,26 @@ func Auth(config AuthConfig) Middleware {
 			unauthHandler := badAuthHandler(config.ErrorMessage)
 
 			if config.SecretKey == "" {
-				unauthHandler = badAuthHandler("Missing `SECRET_KEY` environment variable")
+				handler.ServeHTTP(w, r)
+				return
+			}
+
+			apiKey := r.URL.Query().Get(config.APIKeyName)
+			if apiKey == "" || apiKey != config.SecretKey {
+				invalidKey = true
+			}
+
+			for _, route := range config.WhiteList {
+				if r.URL.Path == route {
+					whitelistRoute = true
+					break
+				}
+			}
+
+			if invalidKey && !whitelistRoute {
 				unauthHandler.ServeHTTP(w, r)
 			} else {
-				query := r.URL.Query()
-				apiKey := query.Get(config.APIKeyName)
-
-				if apiKey == "" || apiKey != config.SecretKey {
-					invalidKey = true
-				}
-
-				for _, route := range config.WhiteList {
-					if r.URL.Path == route {
-						whitelistRoute = true
-						break
-					}
-				}
-
-				if invalidKey && !whitelistRoute {
-					unauthHandler.ServeHTTP(w, r)
-				} else {
-					handler.ServeHTTP(w, r)
-				}
+				handler.ServeHTTP(w, r)
 			}
 		})
 	}

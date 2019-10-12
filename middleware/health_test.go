@@ -1,110 +1,85 @@
-package middleware
+package middleware_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	c "github.com/smartystreets/goconvey/convey"
+	"github.com/nickhstr/goweb/middleware"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHealth(t *testing.T) {
+	assert := assert.New(t)
+
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(helloResp)
 	})
 
-	c.Convey("Given a HealthConfig", t, func() {
-		var hc HealthConfig
-		cbResp := map[string]string{
+	healthCallback := func() map[string]string {
+		return map[string]string{
 			"health": "all good!",
 		}
+	}
 
-		c.Convey("When the config is valid", func() {
-			hc = HealthConfig{
-				Path:     "/test-health",
-				Callback: func() map[string]string { return cbResp },
-			}
-			handler := Health(hc)(helloHandler)
+	expectedHealthResponse := func(v interface{}) []byte {
+		resp, _ := json.Marshal(v)
 
-			c.Convey("The callback response should be returned", func() {
-				expected, err := json.Marshal(hc.Callback())
-				if err != nil {
-					t.Fatal(err)
-				}
-				respRec := httptest.NewRecorder()
+		return resp
+	}
 
-				req, err := http.NewRequest(http.MethodGet, "/test-health", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
+	tests := []struct {
+		msg string
+		middleware.HealthConfig
+		requestPath  string
+		expectedBody []byte
+	}{
+		{
+			"health middleware should respond with the HealthConfig callback",
+			middleware.HealthConfig{
+				Path:     "/health-test",
+				Callback: healthCallback,
+			},
+			"/health-test",
+			expectedHealthResponse(healthCallback()),
+		},
+		{
+			"an empty HealthConfig should return the default response at the default health path",
+			middleware.HealthConfig{},
+			"/health",
+			expectedHealthResponse(map[string]string{}),
+		},
+		{
+			"the wrapped handler should respond to non-health routes",
+			middleware.HealthConfig{
+				Path:     "/health",
+				Callback: healthCallback,
+			},
+			"/",
+			helloResp,
+		},
+	}
 
-				handler.ServeHTTP(respRec, req)
+	for _, test := range tests {
+		handler := middleware.Health(test.HealthConfig)(helloHandler)
+		respRec := httptest.NewRecorder()
 
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
+		req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-				c.So(bytes.Equal(respBody, expected), c.ShouldBeTrue)
-			})
-		})
+		handler.ServeHTTP(respRec, req)
 
-		c.Convey("When the config is missing Path and Callback", func() {
-			hc = HealthConfig{}
-			handler := Health(hc)(helloHandler)
+		respBody, err := ioutil.ReadAll(respRec.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			c.Convey("The default callback response should be returned at path '/health'", func() {
-				expected, err := json.Marshal(map[string]string{})
-				if err != nil {
-					t.Fatal(err)
-				}
-				respRec := httptest.NewRecorder()
-
-				req, err := http.NewRequest(http.MethodGet, "/health", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(bytes.Equal(respBody, expected), c.ShouldBeTrue)
-			})
-		})
-
-		c.Convey("When the path is not a health path", func() {
-			hc = HealthConfig{
-				Path:     "/test-health",
-				Callback: func() map[string]string { return cbResp },
-			}
-			handler := Health(hc)(helloHandler)
-
-			c.Convey("The given handler should handle the response", func() {
-				respRec := httptest.NewRecorder()
-
-				req, err := http.NewRequest(http.MethodGet, "/", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(bytes.Equal(respBody, helloResp), c.ShouldBeTrue)
-			})
-		})
-	})
+		assert.Equal(test.expectedBody, respBody, test.msg)
+	}
 }
