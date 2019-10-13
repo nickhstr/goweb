@@ -5,81 +5,95 @@ import (
 	"testing"
 
 	"github.com/nickhstr/goweb/env"
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGet(t *testing.T) {
-	Convey("Given an environment variable to lookup", t, func() {
-		envVar := "LOG_LEVEL"
+	assert := assert.New(t)
+	goEnv := "GO_ENV"
+	originalVal, _ := os.LookupEnv(goEnv)
+	os.Setenv(goEnv, "test")
+	defer os.Setenv(goEnv, originalVal)
 
-		Convey("When the variable is not set", func() {
-			os.Unsetenv(envVar)
+	tests := []struct {
+		msg        string
+		envVar     string
+		defaultVal string
+		expected   string
+	}{
+		{
+			"value should be empty when env var not set",
+			"SOME_ENV_VAR",
+			"",
+			"",
+		},
+		{
+			"value should be non-empty when env var not set, but defaultVal supplied",
+			"SOME_ENV_VAR",
+			"someValue",
+			"someValue",
+		},
+		{
+			"value should be non-empty when env var is set",
+			"GO_ENV",
+			"",
+			"test",
+		},
+	}
 
-			Convey("The value returned should be empty", func() {
-				So(env.Get(envVar), ShouldEqual, "")
-			})
-		})
-
-		Convey("When the variable is set", func() {
-			envVarVal := "warn"
-			os.Setenv(envVar, envVarVal)
-
-			Convey("A value should be returned", func() {
-				So(env.Get(envVar), ShouldEqual, envVarVal)
-			})
-		})
-	})
+	for _, test := range tests {
+		assert.Equal(test.expected, env.Get(test.envVar, test.defaultVal), test.msg)
+	}
 }
 
 func TestIsProd(t *testing.T) {
+	assert := assert.New(t)
+
 	goEnv := "GO_ENV"
 	originalVal := env.Get(goEnv)
+	os.Setenv(goEnv, "production")
 	defer os.Setenv(goEnv, originalVal)
 
-	Convey("Given a GO_ENV variable", t, func() {
-		Convey("When the variable is set to 'production'", func() {
-			os.Setenv(goEnv, "production")
-
-			Convey("It should return true", func() {
-				isProd := env.IsProd()
-				So(isProd, ShouldEqual, true)
-			})
-		})
-	})
+	assert.True(env.IsProd(), "returns true when GO_ENV is set to 'production'")
 }
 
 func TestEnvVarsToValidate(t *testing.T) {
+	assert := assert.New(t)
+
 	originalGoEnv := env.Get("GO_ENV")
 	originalLogLevel := env.Get("LOG_LEVEL")
+	os.Setenv("GO_ENV", "test")
+	os.Unsetenv("LOG_LEVEL")
 	defer os.Setenv("GO_ENV", originalGoEnv)
 	defer os.Setenv("LOG_LEVEL", originalLogLevel)
 
-	Convey("Given environment variables to validate", t, func() {
-		vars := []string{"GO_ENV", "LOG_LEVEL"}
+	tests := []struct {
+		msg         string
+		vars        []string
+		shouldError bool
+	}{
+		{
+			"env vars should be valid when set",
+			[]string{"GO_ENV"},
+			false,
+		},
+		{
+			"error should be returned when missing one or more env vars",
+			[]string{"GO_ENV", "LOG_LEVEL"},
+			true,
+		},
+		{
+			"no validation should be done when no env vars are supplied",
+			nil,
+			false,
+		},
+	}
 
-		Convey("When they are set", func() {
-			os.Setenv("GO_ENV", "test")
-			os.Setenv("LOG_LEVEL", "debug")
-
-			Convey("The variables should be valid", func() {
-				So(env.ValidateEnvVars(vars), ShouldBeNil)
-			})
-		})
-
-		Convey("When one or more are not set", func() {
-			os.Unsetenv("GO_ENV")
-
-			Convey("ValidateEnvVars should return an error", func() {
-				So(env.ValidateEnvVars(vars), ShouldBeError)
-			})
-		})
-	})
-
-	Convey("Given no variables to validate", t, func() {
-		Convey("When a nil slice is passed to ValidateEnvVars", func() {
-			Convey("It should do nothing", func() {
-				So(env.ValidateEnvVars(nil), ShouldBeNil)
-			})
-		})
-	})
+	for _, test := range tests {
+		if test.shouldError {
+			assert.Error(env.ValidateEnvVars(test.vars), test.msg)
+		} else {
+			assert.Nil(env.ValidateEnvVars(test.vars), test.msg)
+		}
+	}
 }

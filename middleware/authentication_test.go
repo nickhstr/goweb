@@ -1,154 +1,108 @@
 package middleware
 
 import (
-	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	c "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuth(t *testing.T) {
-	c.Convey("Given a handler in need of authentication", t, func() {
-		helloResp := []byte("Hello world")
-		helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(helloResp)
-		})
+	assert := assert.New(t)
 
-		c.Convey("When the AuthConfig is valid", func() {
-			secret := "supersecret"
-			errMsg := "Ah ah ah ah ahh, you didn't say the magic word"
-			ac := AuthConfig{SecretKey: secret, ErrorMessage: errMsg}
-			handler := Auth(ac)(helloHandler)
-
-			c.Convey("A request with secret key should return handler's response", func() {
-				respRec := httptest.NewRecorder()
-
-				req, err := http.NewRequest(http.MethodGet, "/?apiKey="+secret, nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(bytes.Equal(respBody, helloResp), c.ShouldBeTrue)
-			})
-
-			c.Convey("A request without secret key should return error response", func() {
-				respRec := httptest.NewRecorder()
-
-				expected, err := json.Marshal(unauthError{errMsg})
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				req, err := http.NewRequest(http.MethodGet, "/?apiKey=blah", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(respRec.Code, c.ShouldEqual, http.StatusUnauthorized)
-				c.So(bytes.Equal(respBody, expected), c.ShouldBeTrue)
-			})
-		})
-
-		c.Convey("When no error message and no secret key is provided", func() {
-			ac := AuthConfig{SecretKey: "supersecret"}
-			handler := Auth(ac)(helloHandler)
-
-			c.Convey("The default message should be used", func() {
-				respRec := httptest.NewRecorder()
-
-				expected, err := json.Marshal(unauthError{"Invalid api key supplied"})
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				req, err := http.NewRequest(http.MethodGet, "/?apiKey=blah", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(bytes.Equal(respBody, expected), c.ShouldBeTrue)
-			})
-		})
-
-		c.Convey("When no SECRET_KEY env variable is set", func() {
-			ac := AuthConfig{}
-			handler := Auth(ac)(helloHandler)
-
-			c.Convey("The error response should indicate a missing variable", func() {
-				respRec := httptest.NewRecorder()
-
-				expected, err := json.Marshal(unauthError{"Missing `SECRET_KEY` environment variable"})
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				req, err := http.NewRequest(http.MethodGet, "/?apiKey=blah", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(bytes.Equal(respBody, expected), c.ShouldBeTrue)
-			})
-		})
-
-		c.Convey("When a route is whitelisted", func() {
-			secret := "supersecret"
-			ac := AuthConfig{
-				WhiteList: []string{"/hello"},
-				SecretKey: secret,
-			}
-			handler := Auth(ac)(helloHandler)
-
-			c.Convey("The route's handler should not need authentication", func() {
-				respRec := httptest.NewRecorder()
-
-				req, err := http.NewRequest(http.MethodGet, "/hello", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				respBody, err := ioutil.ReadAll(respRec.Body)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(bytes.Equal(respBody, helloResp), c.ShouldBeTrue)
-			})
-		})
+	helloResp := []byte("Hello world")
+	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(helloResp)
 	})
+
+	errResponse := func(msg string) []byte {
+		resp, _ := json.Marshal(unauthError{msg})
+
+		return resp
+	}
+
+	tests := []struct {
+		msg string
+		AuthConfig
+		requestPath  string
+		shouldError  bool
+		expectedCode int
+		expectedBody []byte
+	}{
+		{
+			"a request with secret key should return handler's response",
+			AuthConfig{
+				SecretKey:    "supersecret",
+				ErrorMessage: "Ah ah ah ah ahh, you didn't say the magic word",
+			},
+			"/?apiKey=supersecret",
+			false,
+			http.StatusOK,
+			helloResp,
+		},
+		{
+			"a request without secret key should return error response",
+			AuthConfig{
+				SecretKey:    "supersecret",
+				ErrorMessage: "Ah ah ah ah ahh, you didn't say the magic word",
+			},
+			"/?apiKey=blah",
+			true,
+			http.StatusUnauthorized,
+			errResponse("Ah ah ah ah ahh, you didn't say the magic word"),
+		},
+		{
+			"default error message should be used when one is not supplied to AuthConfig",
+			AuthConfig{
+				SecretKey: "supersecret",
+			},
+			"/?apiKey=blah",
+			true,
+			http.StatusUnauthorized,
+			errResponse("invalid API key supplied"),
+		},
+		{
+			"supplied handler's response should be served when no secret key is set",
+			AuthConfig{},
+			"/",
+			false,
+			http.StatusOK,
+			helloResp,
+		},
+		{
+			"whitelisted routes should not require authentication",
+			AuthConfig{
+				SecretKey: "supersecret",
+				WhiteList: []string{"/hello"},
+			},
+			"/hello",
+			false,
+			http.StatusOK,
+			helloResp,
+		},
+	}
+
+	for _, test := range tests {
+		respRec := httptest.NewRecorder()
+		handler := Auth(test.AuthConfig)(helloHandler)
+
+		req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		handler.ServeHTTP(respRec, req)
+
+		respBody, err := ioutil.ReadAll(respRec.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		assert.Equal(test.expectedCode, respRec.Code, test.msg)
+		assert.Equal(test.expectedBody, respBody, test.msg)
+	}
 }

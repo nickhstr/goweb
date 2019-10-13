@@ -6,57 +6,58 @@ import (
 	"testing"
 
 	"github.com/nickhstr/goweb/middleware"
-	c "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHeaders(t *testing.T) {
+	assert := assert.New(t)
+
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(helloResp)
 	})
 
-	c.Convey("Given a headers config", t, func() {
-		var config middleware.AppHeaders
+	tests := []struct {
+		msg string
+		middleware.AppHeaders
+		expectedHeaders map[string]string
+	}{
+		{
+			"the headers middleware should add headers from the config",
+			middleware.AppHeaders{
+				AppName:     "test-app",
+				AppVersion:  "1.0.0",
+				GitRevision: "abc123",
+				Region:      "local",
+			},
+			map[string]string{
+				http.CanonicalHeaderKey("app-name"):    "test-app",
+				http.CanonicalHeaderKey("app-version"): "1.0.0-abc123",
+				http.CanonicalHeaderKey("region"):      "local",
+			},
+		},
+	}
 
-		c.Convey("When the config is not empty", func() {
-			appName := "test-app"
-			appVersion := "1.0.0"
-			gitRevision := "abc123"
-			region := "local"
-			config = middleware.AppHeaders{
-				AppName:     appName,
-				AppVersion:  appVersion,
-				GitRevision: gitRevision,
-				Region:      region,
+	for _, test := range tests {
+		var matchingHeaders = true
+
+		handler := middleware.Headers(test.AppHeaders)(helloHandler)
+		respRec := httptest.NewRecorder()
+
+		req, err := http.NewRequest(http.MethodGet, "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		handler.ServeHTTP(respRec, req)
+
+		for key, val := range respRec.Header() {
+			if val[0] != test.expectedHeaders[key] {
+				matchingHeaders = false
 			}
-			handler := middleware.Headers(config)(helloHandler)
+		}
 
-			c.Convey("The headers middleware should add headers from the config", func() {
-				expected := map[string]string{
-					http.CanonicalHeaderKey("app-name"):    appName,
-					http.CanonicalHeaderKey("app-version"): appVersion + "-" + gitRevision,
-					http.CanonicalHeaderKey("region"):      region,
-				}
-
-				respRec := httptest.NewRecorder()
-
-				req, err := http.NewRequest(http.MethodGet, "/", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				handler.ServeHTTP(respRec, req)
-
-				var matchingHeaders = true
-				for key, val := range respRec.Header() {
-					if val[0] != expected[key] {
-						matchingHeaders = false
-					}
-				}
-
-				c.So(matchingHeaders, c.ShouldBeTrue)
-			})
-		})
-	})
+		assert.True(matchingHeaders, test.msg)
+	}
 }

@@ -5,56 +5,58 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	c "github.com/smartystreets/goconvey/convey"
+	"github.com/stretchr/testify/assert"
 )
 
 // Testing the log output doesn't add much value; however, testing the statusRecorder
 // used by the Logging middleware is useful.
 func TestStatusRecorder(t *testing.T) {
-	c.Convey("Given a handler", t, func() {
-		notFoundHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(404)
-			_, _ = w.Write([]byte("Not found"))
-		})
+	assert := assert.New(t)
 
-		c.Convey("When the reponse status needs to be recorded", func() {
-			c.Convey("The statusRecorder should record the status set by a handler", func() {
-				respRec := httptest.NewRecorder()
-				sr := &statusRecorder{ResponseWriter: respRec}
+	tests := []struct {
+		msg string
+		http.HandlerFunc
+		expectedCode int
+	}{
+		{
+			"the statusRecorder should record status code set explicitly",
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte("Not found"))
+			}),
+			http.StatusNotFound,
+		},
+	}
 
-				req, err := http.NewRequest(http.MethodGet, "/", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
+	for _, test := range tests {
+		respRec := httptest.NewRecorder()
+		sr := &statusRecorder{ResponseWriter: respRec}
 
-				notFoundHandler.ServeHTTP(sr, req)
+		req, err := http.NewRequest(http.MethodGet, "/", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-				c.So(sr.status, c.ShouldEqual, 404)
-			})
-		})
-	})
+		test.HandlerFunc.ServeHTTP(sr, req)
+
+		assert.Equal(test.expectedCode, sr.status, test.msg)
+	}
 }
 
 // Add Logger test only so that coverage is not unecessarily lowered.
 func TestLogger(t *testing.T) {
+	assert := assert.New(t)
+
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("Hello"))
 	})
+	handler := Logger(helloHandler)
+	respRec := httptest.NewRecorder()
 
-	c.Convey("Given a Logger", t, func() {
-		c.Convey("When it is passed a handler", func() {
-			handler := Logger(helloHandler)
+	req, err := http.NewRequest(http.MethodGet, "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-			c.Convey("Info about the request should be logged", func() {
-				respRec := httptest.NewRecorder()
-
-				req, err := http.NewRequest(http.MethodGet, "/", nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				c.So(func() { handler.ServeHTTP(respRec, req) }, c.ShouldNotPanic)
-			})
-		})
-	})
+	assert.NotPanics(func() { handler.ServeHTTP(respRec, req) })
 }
