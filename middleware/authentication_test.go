@@ -29,7 +29,6 @@ func TestAuth(t *testing.T) {
 		msg string
 		AuthConfig
 		requestPath  string
-		shouldError  bool
 		expectedCode int
 		expectedBody []byte
 	}{
@@ -40,7 +39,6 @@ func TestAuth(t *testing.T) {
 				ErrorMessage: "Ah ah ah ah ahh, you didn't say the magic word",
 			},
 			"/?apiKey=supersecret",
-			false,
 			http.StatusOK,
 			helloResp,
 		},
@@ -51,7 +49,6 @@ func TestAuth(t *testing.T) {
 				ErrorMessage: "Ah ah ah ah ahh, you didn't say the magic word",
 			},
 			"/?apiKey=blah",
-			true,
 			http.StatusUnauthorized,
 			errResponse("Ah ah ah ah ahh, you didn't say the magic word"),
 		},
@@ -61,7 +58,6 @@ func TestAuth(t *testing.T) {
 				SecretKey: "supersecret",
 			},
 			"/?apiKey=blah",
-			true,
 			http.StatusUnauthorized,
 			errResponse("invalid API key supplied"),
 		},
@@ -69,7 +65,6 @@ func TestAuth(t *testing.T) {
 			"supplied handler's response should be served when no secret key is set",
 			AuthConfig{},
 			"/",
-			false,
 			http.StatusOK,
 			helloResp,
 		},
@@ -80,7 +75,6 @@ func TestAuth(t *testing.T) {
 				WhiteList: []string{"/hello"},
 			},
 			"/hello",
-			false,
 			http.StatusOK,
 			helloResp,
 		},
