@@ -3,21 +3,27 @@ name: CI
 on: [push]
 
 jobs:
-  build:
-
+  prepare:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v1
 
-    - name: Prepare
+    - name: Setup Go
       uses: actions/setup-go@v1
       with:
         go-version: 1.13
+
+    - name: Install Mage
       run: |
         go install github.com/magefile/mage
         mage install
 
+  build:
+    needs: prepare
+    runs-on: ubuntu-latest
+
+    steps:
     - name: Lint
       run: mage lint
 
