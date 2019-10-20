@@ -19,16 +19,11 @@ jobs:
       with:
         version: 1.9.0
 
-    - name: Install golangci-lint
-      uses: nickhstr/action-setup-golangci-lint@v0.1.0
-      with:
-        version: 1.21.0
-
     - name: Download Dependencies
-      run: mage installCI
-
-    - name: Test
-      run: mage coverage
+      run: mage install
 
     - name: Lint
       run: mage lint
+
+    - name: Test
+      run: mage coverage

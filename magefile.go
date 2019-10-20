@@ -8,7 +8,6 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"github.com/nickhstr/goweb/tools"
 )
 
 var Default = Install
@@ -56,46 +55,14 @@ func CreateCoverage() error {
 
 // Installs all dependencies.
 func Install() error {
-	var (
-		err       error
-		toolsPath = "./internal/tools/tools.go"
-	)
+	var err error
 
-	fmt.Println("downloading dependencies")
 	err = sh.RunV("go", "mod", "download")
 	if err != nil {
 		return err
 	}
 
-	f, err := tools.DepsFile(toolsPath)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	toolDeps, err := tools.ToInstall(f)
-	if err != nil {
-		return err
-	}
-
-	for _, dep := range toolDeps {
-		fmt.Printf("installing %s\n", dep)
-		err = sh.RunV("go", "install", dep)
-		if err != nil {
-			return err
-		}
-	}
-
-	fmt.Println("👍 Done.")
-
-	return err
-}
-
-// Only downloads Go dependencies. Other tools are installed separately.
-func InstallCI() error {
-	fmt.Println("downloading dependencies")
-	err := sh.RunV("go", "mod", "download")
+	err = sh.RunV("go", "mod", "vendor")
 
 	return err
 }
@@ -104,7 +71,8 @@ func InstallCI() error {
 func Lint() error {
 	var err error
 
-	err = sh.RunV("golangci-lint", "run")
+	// err = sh.RunV("golangci-lint", "run")
+	err = sh.RunV("go", "run", "vendor/github.com/golangci/golangci-lint/cmd/golangci-lint/main.go", "run")
 	if err != nil {
 		return err
 	}
