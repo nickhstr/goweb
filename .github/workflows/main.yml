@@ -24,11 +24,11 @@ jobs:
       with:
         version: 1.21.0
 
-    - name: Lint
-      run: mage lint
-
     - name: Download Dependencies
       run: mage installCI
 
     - name: Test
       run: mage coverage
+
+    - name: Lint
+      run: mage lint
