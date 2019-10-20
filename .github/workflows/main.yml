@@ -3,7 +3,7 @@ name: CI
 on: [push]
 
 jobs:
-  prepare:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,11 +27,6 @@ jobs:
     - name: Download Dependencies
       run: mage installCI
 
-  build:
-    needs: prepare
-    runs-on: ubuntu-latest
-
-    steps:
     - name: Lint
       run: mage lint
 
