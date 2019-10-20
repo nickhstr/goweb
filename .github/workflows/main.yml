@@ -15,9 +15,10 @@ jobs:
         go-version: 1.13
 
     - name: Install Mage
-      run: |
-        go install github.com/magefile/mage
-        mage install
+      uses: nickhstr/action-setup-mage
+
+    - name: Install Dependencies
+      run: mage install
 
   build:
     needs: prepare
