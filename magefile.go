@@ -92,6 +92,14 @@ func Install() error {
 	return err
 }
 
+// Only downloads Go dependencies. Other tools are installed separately.
+func InstallCI() error {
+	fmt.Println("downloading dependencies")
+	err := sh.RunV("go", "mod", "download")
+
+	return err
+}
+
 // Lints all files.
 func Lint() error {
 	var err error

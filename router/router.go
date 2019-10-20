@@ -14,10 +14,7 @@ func New(routes []Route) http.Handler {
 
 	// Register routes with router
 	for _, route := range routes {
-		var handler http.Handler
-		handler = route.Handler
-
-		router.Method(route.Method, route.Path, handler)
+		router.Method(route.Method, route.Path, route.Handler)
 	}
 
 	return router
