@@ -15,7 +15,7 @@ jobs:
         go-version: 1.13
 
     - name: Install Mage
-      uses: nickhstr/action-setup-mage@v0.3.0
+      uses: nickhstr/action-setup-mage@v0.4.0
 
     - name: Install Dependencies
       run: mage install
