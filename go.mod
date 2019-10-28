@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/newrelic/go-agent v2.13.0+incompatible
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
-	github.com/rs/zerolog v1.15.0
+	github.com/rs/zerolog v1.16.0
 	github.com/stretchr/testify v1.4.0
 	github.com/unrolled/secure v1.0.4
 	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
