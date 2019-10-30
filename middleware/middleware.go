@@ -8,28 +8,28 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/nickhstr/goweb/env"
-	"github.com/nickhstr/goweb/logger"
-	"github.com/rs/zerolog"
 	"github.com/unrolled/secure"
 )
 
 var startTime time.Time
-var log zerolog.Logger
 
 func init() {
 	startTime = time.Now()
-	log = logger.New("middleware")
-}
-
-func uptime() time.Duration {
-	return time.Since(startTime)
 }
 
 // Middleware represents the function type for all middleware.
 type Middleware func(http.Handler) http.Handler
 
 // Compose adds middleware handlers to a given handler.
+// Middleware handlers are ordered from first to last.
 func Compose(handler http.Handler, middlewares ...Middleware) http.Handler {
+	// Reverse order of middlewares so that consumers of Compose can order
+	// their middlewares from first to last
+	for i := len(middlewares)/2 - 1; i >= 0; i-- {
+		opp := len(middlewares) - 1 - i
+		middlewares[i], middlewares[opp] = middlewares[opp], middlewares[i]
+	}
+
 	for _, middleware := range middlewares {
 		handler = middleware(handler)
 	}
@@ -61,6 +61,13 @@ func Create(config Config) http.Handler {
 		middleware []Middleware
 	)
 
+	// Add initial middleware
+	middleware = append(
+		middleware,
+		Logger,
+		Recover,
+	)
+
 	err := env.ValidateEnvVars(config.EnvVarsToValidate)
 	if err != nil {
 		// Log invalid env vars and exit
@@ -86,6 +93,7 @@ func Create(config Config) http.Handler {
 
 	middleware = append(
 		middleware,
+		Secure(config.SecureOptions),
 		Health(HealthConfig{
 			Path: healthPath,
 			Callback: func() map[string]string {
@@ -94,7 +102,7 @@ func Create(config Config) http.Handler {
 					"version": config.AppVersion,
 					"region":  config.Region,
 					"sha1":    config.GitRevision,
-					"uptime":  fmt.Sprintf("%vs", uptime().Seconds()),
+					"uptime":  fmt.Sprintf("%vs", time.Since(startTime).Seconds()),
 				}
 			},
 		}),
@@ -104,18 +112,11 @@ func Create(config Config) http.Handler {
 			GitRevision: config.GitRevision,
 			Region:      config.Region,
 		}),
-		Secure(config.SecureOptions),
 	)
 
 	if config.Compress {
 		middleware = append(middleware, handlers.CompressHandler)
 	}
-
-	middleware = append(
-		middleware,
-		Logger,
-		Recover,
-	)
 
 	return Compose(
 		config.Handler,

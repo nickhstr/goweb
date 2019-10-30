@@ -8,16 +8,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var rootLogger zerolog.Logger
+// Logger provides a convenient alias for other packages
+type Logger = zerolog.Logger
+
+var rootLogger Logger
 
 func init() {
-	rootLogger = zerolog.New(getOutput()).
+	rootLogger = zerolog.New(logWriter()).
 		With().
 		Timestamp().
 		Logger()
 }
 
-func getLevel(logLevel string) zerolog.Level {
+func level(logLevel string) zerolog.Level {
 	if logLevel == "" {
 		logLevel = env.Get("LOG_LEVEL")
 	}
@@ -43,7 +46,7 @@ func getLevel(logLevel string) zerolog.Level {
 	}
 }
 
-func getOutput() io.Writer {
+func logWriter() io.Writer {
 	// See https://golang.org/pkg/time/#pkg-constants for time layout rules
 	const devTimeFormat = "2006/01/2 15:04:05"
 	var out io.Writer
@@ -58,22 +61,22 @@ func getOutput() io.Writer {
 }
 
 // New creates a new child logger.
-func New(namespace string) zerolog.Logger {
+func New(namespace string) Logger {
 	logger := createLogger(namespace, "")
 
 	return logger
 }
 
 // NewWithLevel creates a new child logger with the specified level and output.
-func NewWithLevel(namespace, logLevel string) zerolog.Logger {
+func NewWithLevel(namespace, logLevel string) Logger {
 	logger := createLogger(namespace, logLevel)
 
 	return logger
 }
 
-func createLogger(namespace, logLevel string) zerolog.Logger {
+func createLogger(namespace, logLevel string) Logger {
 	logger := rootLogger.
-		Level(getLevel(logLevel)).
+		Level(level(logLevel)).
 		With().
 		Str("namespace", namespace).
 		Logger()

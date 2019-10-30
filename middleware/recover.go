@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/nickhstr/goweb/env"
+	"github.com/rs/zerolog/hlog"
 )
 
 // Recover middleware recovers from panics, and logs the error.
@@ -15,7 +16,7 @@ func Recover(handler http.Handler) http.Handler {
 			if err := recover(); err != nil {
 				errMsg := "An unexpected error occured"
 				stack := debug.Stack()
-				log.Error().
+				hlog.FromRequest(r).Error().
 					Bytes("stacktrace", stack).
 					Msg(errMsg)
 
