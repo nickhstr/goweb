@@ -135,6 +135,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 		return cachedResp, nil
 	}
 
+	// Create request
 	req, err := fc.NewRequest()
 	if err != nil {
 		log.Error().
@@ -144,8 +145,14 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 		return response, err
 	}
 
+	// Create new client versus using http.DefaultClient,
+	// so that a timeout may be used without modifying
+	// http.DefaultClient
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
 	// Make request
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).

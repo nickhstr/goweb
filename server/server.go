@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
@@ -53,7 +54,11 @@ func Start(mux http.Handler) {
 		dnsCacheTTL,
 	)
 
-	srv := &http.Server{Handler: mux}
+	srv := &http.Server{
+		Handler:      mux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+	}
 
 	idlConnsClosed := make(chan struct{})
 	go shutdown(srv, idlConnsClosed)
@@ -74,13 +79,13 @@ func Start(mux http.Handler) {
 }
 
 // Shutdown server gracefully on SIGINT or SIGTERM
-func shutdown(server *http.Server, idleConnectionsClosed chan struct{}) {
+func shutdown(srv *http.Server, idleConnectionsClosed chan struct{}) {
 	// Block until signal is received
 	sigint := make(chan os.Signal, 1)
 	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
 	<-sigint
 
-	if err := server.Shutdown(context.Background()); err != nil {
+	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Error().
 			Err(err).
 			Msg("Server shutdown error")
