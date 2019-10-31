@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/logger"
 	"github.com/unrolled/secure"
 )
 
@@ -58,6 +59,7 @@ type Config struct {
 func Create(config Config) http.Handler {
 	var (
 		healthPath = fmt.Sprintf("/%s/health", config.AppName)
+		log        = logger.New("middleware")
 		middleware []Middleware
 	)
 

@@ -10,12 +10,6 @@ import (
 	"github.com/rs/zerolog/hlog"
 )
 
-var log logger.Logger
-
-func init() {
-	log = logger.New("middleware")
-}
-
 // Used to wrap an http.ResponseWriter to capture the response's status code
 type statusRecorder struct {
 	http.ResponseWriter
@@ -29,6 +23,8 @@ func (sr *statusRecorder) WriteHeader(code int) {
 
 // Logger outputs general information about requests.
 func Logger(handler http.Handler) http.Handler {
+	var log = logger.New("middleware")
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Use 200 status code as default
 		rw := &statusRecorder{w, http.StatusOK}
