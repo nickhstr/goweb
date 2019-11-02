@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/gorilla/handlers"
@@ -58,7 +59,7 @@ type Config struct {
 // other middleware, the new middleware should follow afterward.
 func Create(config Config) http.Handler {
 	var (
-		healthPath = fmt.Sprintf("/%s/health", config.AppName)
+		healthPath = path.Join("/", config.AppName, "health")
 		log        = logger.New("middleware")
 		middleware []Middleware
 	)
@@ -99,13 +100,15 @@ func Create(config Config) http.Handler {
 		Health(HealthConfig{
 			Path: healthPath,
 			Callback: func() map[string]string {
-				return map[string]string{
+				var healthResponse = map[string]string{
 					"name":    config.AppName,
 					"version": config.AppVersion,
 					"region":  config.Region,
 					"sha1":    config.GitRevision,
 					"uptime":  fmt.Sprintf("%vs", time.Since(startTime).Seconds()),
 				}
+
+				return healthResponse
 			},
 		}),
 		Headers(AppHeaders{
