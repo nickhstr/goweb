@@ -19,10 +19,10 @@ var log = logger.New("server")
 
 // Start creates and starts a server, listening on "address"
 func Start(mux http.Handler) {
+	const defaultTimeout = 15
 	var (
 		address  string
 		listener net.Listener
-		mode     = env.Get("GO_ENV", "development")
 		err      error
 	)
 
@@ -54,10 +54,18 @@ func Start(mux http.Handler) {
 		dnsCacheTTL,
 	)
 
+	srvTimeout, err := strconv.Atoi(env.Get("SERVER_TIMEOUT", strconv.Itoa(defaultTimeout)))
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msg("Invalid SERVER_TIMEOUT set")
+		srvTimeout = defaultTimeout
+	}
+
 	srv := &http.Server{
 		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  time.Duration(srvTimeout) * time.Second,
+		WriteTimeout: time.Duration(srvTimeout) * time.Second,
 	}
 
 	idlConnsClosed := make(chan struct{})
@@ -65,7 +73,7 @@ func Start(mux http.Handler) {
 
 	log.Log().
 		Str("address", address).
-		Str("mode", mode).
+		Str("mode", env.Get("GO_ENV", "development")).
 		Msg("Server listening")
 
 	err = srv.Serve(listener)
