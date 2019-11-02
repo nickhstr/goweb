@@ -57,12 +57,14 @@ func CreateCoverage() error {
 func Install() error {
 	var err error
 
+	fmt.Println("📡 Downloading dependencies...")
 	err = sh.RunV("go", "mod", "download")
 	if err != nil {
 		return err
 	}
 
 	err = sh.RunV("go", "mod", "vendor")
+	fmt.Println("✨ Done.")
 
 	return err
 }
@@ -98,6 +100,13 @@ func Test() error {
 	}
 
 	fmt.Println("✅ Done.")
+
+	return err
+}
+
+// Runs all tests, and watches for changes.
+func TestDev() error {
+	err := sh.RunV("go", "run", "vendor/github.com/cortesi/modd/cmd/modd/main.go", "--file=./internal/tools/modd.test.conf")
 
 	return err
 }
