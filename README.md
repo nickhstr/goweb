@@ -1,3 +1,5 @@
+[![built with mage](https://magefile.org/badge.svg)](https://magefile.org/)
+
 # goweb
 A collection of reusable Go packages for web development. The goal is to remain simple
 and idiomatic, while adhering to the standard library's APIs when possible.
