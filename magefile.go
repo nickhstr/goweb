@@ -73,6 +73,7 @@ func Install() error {
 func Lint() error {
 	var err error
 
+	fmt.Println("🔍 Linting files...")
 	err = sh.RunV("go", "run", "vendor/github.com/golangci/golangci-lint/cmd/golangci-lint/main.go", "run")
 	if err != nil {
 		return err

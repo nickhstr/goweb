@@ -14,12 +14,39 @@ import (
 // seconds to use for the cache refresh interval.
 func DNSCache(enable bool, ttl int) {
 	if !enable {
+		// The default DialContext used by http.DefaultTransport
+		defaultDialContext := (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext
+		// Reset the DialContext, in case it has been altered from its default value
+		http.DefaultTransport.(*http.Transport).DialContext = defaultDialContext
+
 		return
 	}
 
 	r := &dnscache.Resolver{}
-	http.DefaultTransport.(*http.Transport).
-		DialContext = func(ctx context.Context, network string, addr string) (conn net.Conn, err error) {
+	http.DefaultTransport.(*http.Transport).DialContext = cachedDialContext(r)
+
+	// Run refresh job in background
+	go func() {
+		t := time.NewTicker(time.Duration(ttl) * time.Second)
+		defer t.Stop()
+		for range t.C {
+			// Use true to refresh addresses not used since the last refresh
+			r.Refresh(true)
+		}
+	}()
+}
+
+func cachedDialContext(r *dnscache.Resolver) func(context.Context, string, string) (net.Conn, error) {
+	dc := func(ctx context.Context, network string, addr string) (net.Conn, error) {
+		var (
+			conn net.Conn
+			err  error
+		)
+
 		host, port, err := net.SplitHostPort(addr)
 		if err != nil {
 			return nil, err
@@ -36,16 +63,8 @@ func DNSCache(enable bool, ttl int) {
 				break
 			}
 		}
-		return
+		return conn, err
 	}
 
-	// Run refresh job in background
-	go func() {
-		t := time.NewTicker(time.Duration(ttl) * time.Second)
-		defer t.Stop()
-		for range t.C {
-			// Use true to refresh addresses not used since the last refresh
-			r.Refresh(true)
-		}
-	}()
+	return dc
 }
