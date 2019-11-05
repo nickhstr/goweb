@@ -105,7 +105,7 @@ func (fc *FetchConfig) NewRequest() (*http.Request, error) {
 	return req, nil
 }
 
-// Fetch makes a request, and caches its response.
+// Fetch makes a request, caches its response, and returns the response body.
 // By default, the cache is only used for GET requests. For all
 // other methods, fc.CacheKey must be defined
 func Fetch(fc FetchConfig) ([]byte, error) {
@@ -162,7 +162,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 	}
 
 	if fc.TTL == 0 {
-		ttl = getTTLFromResponse(resp)
+		ttl = ttlFromResponse(resp)
 	}
 
 	log.Info().
@@ -172,7 +172,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 		Bool("redis", false).
 		Msg("DAL request")
 
-	respBody, err := getResponseBody(resp)
+	body, err := responseBody(resp)
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).
@@ -182,17 +182,126 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 	}
 
 	// Try to store response in cache
-	cache.Set(fc.CacheKey, respBody, ttl)
+	cache.Set(fc.CacheKey, body, ttl)
 
-	return respBody, nil
+	return body, nil
 }
 
-// Used for getTTLFromResponse
+/***** Fetch Wrappers *****/
+
+// Delete is a convenience wrapper for Fetch.
+func Delete(rawurl string) ([]byte, error) {
+	var err error
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		err := fmt.Errorf("dal.Delete URL parse error: %w", err)
+		return []byte{}, err
+	}
+
+	fc := FetchConfig{
+		URL:    *u,
+		Method: http.MethodDelete,
+	}
+	return Fetch(fc)
+}
+
+// Get is a convenience wrapper for Fetch.
+func Get(rawurl string) ([]byte, error) {
+	var err error
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		err := fmt.Errorf("dal.Get URL parse error: %w", err)
+		return []byte{}, err
+	}
+
+	fc := FetchConfig{
+		URL:    *u,
+		Method: http.MethodGet,
+	}
+	return Fetch(fc)
+}
+
+// Head is a convenience wrapper for Fetch.
+func Head(rawurl string) ([]byte, error) {
+	var err error
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		err := fmt.Errorf("dal.Head URL parse error: %w", err)
+		return []byte{}, err
+	}
+
+	fc := FetchConfig{
+		URL:    *u,
+		Method: http.MethodHead,
+	}
+	return Fetch(fc)
+}
+
+// Patch is a convenience wrapper for Fetch.
+func Patch(rawurl string, body []byte) ([]byte, error) {
+	var err error
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		err := fmt.Errorf("dal.Patch URL parse error: %w", err)
+		return []byte{}, err
+	}
+
+	fc := FetchConfig{
+		URL:    *u,
+		Method: http.MethodPatch,
+		Body:   body,
+	}
+	return Fetch(fc)
+}
+
+// Post is a convenience wrapper for Fetch.
+func Post(rawurl string, body []byte) ([]byte, error) {
+	var err error
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		err := fmt.Errorf("dal.Post URL parse error: %w", err)
+		return []byte{}, err
+	}
+
+	fc := FetchConfig{
+		URL:    *u,
+		Method: http.MethodPost,
+		Body:   body,
+	}
+	return Fetch(fc)
+}
+
+// Put is a convenience wrapper for Fetch.
+func Put(rawurl string, body []byte) ([]byte, error) {
+	var err error
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		err := fmt.Errorf("dal.Put URL parse error: %w", err)
+		return []byte{}, err
+	}
+
+	fc := FetchConfig{
+		URL:    *u,
+		Method: http.MethodPut,
+		Body:   body,
+	}
+	return Fetch(fc)
+}
+
+/***** Utils *****/
+
+// Used for ttlFromResponse
 var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 
 // Attempts to get a TTL value from a response's "cache-control" header.
 // Otherwise, the given default TTL is used.
-func getTTLFromResponse(r *http.Response) time.Duration {
+func ttlFromResponse(r *http.Response) time.Duration {
 	var ttl time.Duration
 
 	headerKey := http.CanonicalHeaderKey("cache-control")
@@ -222,7 +331,8 @@ func getTTLFromResponse(r *http.Response) time.Duration {
 	return ttl
 }
 
-func getResponseBody(resp *http.Response) ([]byte, error) {
+// Returns the response's body, with support for gzipped responses.
+func responseBody(resp *http.Response) ([]byte, error) {
 	var reader io.ReadCloser
 
 	switch resp.Header.Get(http.CanonicalHeaderKey("content-encoding")) {
