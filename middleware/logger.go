@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -19,6 +18,13 @@ type statusRecorder struct {
 func (sr *statusRecorder) WriteHeader(code int) {
 	sr.status = code
 	sr.ResponseWriter.WriteHeader(code)
+}
+
+// Flush satisfies the http.Flusher interface
+func (sr *statusRecorder) Flush() {
+	if w, ok := sr.ResponseWriter.(http.Flusher); ok {
+		w.Flush()
+	}
 }
 
 // Logger outputs general information about requests.
@@ -41,7 +47,7 @@ func Logger(handler http.Handler) http.Handler {
 			Str("url", r.URL.String()).
 			Str("host", r.Host).
 			Interface("request-headers", r.Header).
-			Str("response-time", fmt.Sprintf("%v", time.Since(start))).
+			Str("response-time", time.Since(start).String()).
 			Int("status", rw.status).
 			Str("app-name", env.Get("APP_NAME", "web-service")).
 			Msg("Route handler")

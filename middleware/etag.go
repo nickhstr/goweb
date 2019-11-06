@@ -20,8 +20,18 @@ func (e *EtagWriter) WriteHeader(status int) {
 	e.status = status
 }
 
+// Flush satisfies the http.Flusher interface
+func (e *EtagWriter) Flush() {
+	if w, ok := e.ResponseWriter.(http.Flusher); ok {
+		w.Flush()
+	}
+}
+
 func (e *EtagWriter) Write(p []byte) (int, error) {
-	et := etag.Generate(p, false)
+	// `weak` should be true when the ResponseWriter is a Flusher, as that
+	// indicates the response body can be streamed
+	_, weak := e.ResponseWriter.(http.Flusher)
+	et := etag.Generate(p, weak)
 	e.ResponseWriter.Header().Set("ETag", et)
 
 	if e.clientEtag == et {
@@ -35,8 +45,7 @@ func (e *EtagWriter) Write(p []byte) (int, error) {
 	return e.ResponseWriter.Write(p)
 }
 
-// Etag middleware sets the ETag header. Note, this middleware is only useful for buffered response
-// bodies.
+// Etag middleware sets the ETag header.
 func Etag(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		e := &EtagWriter{
