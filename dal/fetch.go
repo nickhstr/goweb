@@ -28,6 +28,9 @@ type FetchConfig struct {
 	// Body store the request's body.
 	Body []byte
 	http.Header
+	// Optionally provide an http.Client
+	// When not set, a new client is created in fc.validate()
+	*http.Client
 	// Query is the url.Values form of the request's query params.
 	// These are to be encoded for use by URL's RawQuery.
 	Query url.Values
@@ -75,6 +78,13 @@ func (fc *FetchConfig) validate() error {
 		// Only set CacheKey when not already provided and the method is GET
 		// Otherwise, leave empty to avoid using the cache
 		fc.CacheKey = "dal:" + fc.String()
+	}
+	if fc.Client == nil {
+		// Default to creating a new client versus using http.DefaultClient,
+		// so that a timeout may be used without modifying http.DefaultClient
+		fc.Client = &http.Client{
+			Timeout: 15 * time.Second,
+		}
 	}
 
 	return nil
@@ -144,15 +154,8 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 			Msg(err.Error())
 		return response, err
 	}
-
-	// Create new client versus using http.DefaultClient,
-	// so that a timeout may be used without modifying
-	// http.DefaultClient
-	client := &http.Client{
-		Timeout: 15 * time.Second,
-	}
 	// Make request
-	resp, err := client.Do(req)
+	resp, err := fc.Client.Do(req)
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).
