@@ -46,6 +46,7 @@ type Config struct {
 	AppVersion        string
 	Compress          bool
 	EnvVarsToValidate []string
+	Etag              bool
 	GitRevision       string
 	Handler           http.Handler
 	Region            string
@@ -92,6 +93,10 @@ func Create(config Config) http.Handler {
 			WhiteList: wl,
 			SecretKey: fmt.Sprintf("%x", md5.Sum([]byte(secretKey))),
 		}))
+	}
+
+	if config.Etag {
+		middleware = append(middleware, Etag)
 	}
 
 	middleware = append(
