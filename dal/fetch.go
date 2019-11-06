@@ -128,7 +128,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 	if err == nil {
 		log.Info().
 			Str("url", fetchURL).
-			Str("response-time", fmt.Sprintf("%v", time.Since(start))).
+			Str("response-time", time.Since(start).String()).
 			Bool("redis", true).
 			Msg("DAL request")
 
@@ -167,7 +167,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 
 	log.Info().
 		Str("url", fetchURL).
-		Str("response-time", fmt.Sprintf("%v", time.Since(start))).
+		Str("response-time", time.Since(start).String()).
 		Dur("ttl", ttl).
 		Bool("redis", false).
 		Msg("DAL request")
