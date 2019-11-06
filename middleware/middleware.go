@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"path"
@@ -25,15 +26,10 @@ type Middleware func(http.Handler) http.Handler
 // Compose adds middleware handlers to a given handler.
 // Middleware handlers are ordered from first to last.
 func Compose(handler http.Handler, middlewares ...Middleware) http.Handler {
-	// Reverse order of middlewares so that consumers of Compose can order
+	// Execute middleware by LIFO order, so that consumers of Compose can order
 	// their middlewares from first to last
-	for i := len(middlewares)/2 - 1; i >= 0; i-- {
-		opp := len(middlewares) - 1 - i
-		middlewares[i], middlewares[opp] = middlewares[opp], middlewares[i]
-	}
-
-	for _, middleware := range middlewares {
-		handler = middleware(handler)
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		handler = middlewares[i](handler)
 	}
 
 	return handler
@@ -89,11 +85,15 @@ func Create(config Config) http.Handler {
 			wl = config.WhiteList
 		}
 
+		secretHash := md5.Sum([]byte(secretKey))
+
 		middleware = append(middleware, Auth(AuthConfig{
 			WhiteList: wl,
-			SecretKey: fmt.Sprintf("%x", md5.Sum([]byte(secretKey))),
+			SecretKey: hex.EncodeToString(secretHash[:]),
 		}))
 	}
+
+	middleware = append(middleware, Secure(config.SecureOptions))
 
 	if config.Etag {
 		middleware = append(middleware, Etag)
@@ -101,7 +101,6 @@ func Create(config Config) http.Handler {
 
 	middleware = append(
 		middleware,
-		Secure(config.SecureOptions),
 		Health(HealthConfig{
 			Path: healthPath,
 			Callback: func() map[string]string {
@@ -110,7 +109,7 @@ func Create(config Config) http.Handler {
 					"version": config.AppVersion,
 					"region":  config.Region,
 					"sha1":    config.GitRevision,
-					"uptime":  fmt.Sprintf("%vs", time.Since(startTime).Seconds()),
+					"uptime":  fmt.Sprintf("%fs", time.Since(startTime).Seconds()),
 				}
 
 				return healthResponse
