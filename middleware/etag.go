@@ -40,8 +40,11 @@ func (e *EtagWriter) Write(p []byte) (int, error) {
 		return e.ResponseWriter.Write([]byte{})
 	}
 
-	// Make sure to call ResponseWriter's WriteHeader, with stored status
-	e.ResponseWriter.WriteHeader(e.status)
+	if e.status != 0 {
+		// Make sure to call ResponseWriter's WriteHeader, with stored status
+		e.ResponseWriter.WriteHeader(e.status)
+	}
+
 	return e.ResponseWriter.Write(p)
 }
 
