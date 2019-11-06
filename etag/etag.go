@@ -2,11 +2,13 @@ package etag
 
 import (
 	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 )
 
 func hash(p []byte) string {
-	return fmt.Sprintf("%x", sha1.Sum(p))
+	h := sha1.Sum(p)
+	return hex.EncodeToString(h[:])
 }
 
 // Generate an etag for given byte slice. Can be set as weak with second boolean parameter.
