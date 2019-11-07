@@ -20,6 +20,12 @@ import (
 
 var log = logger.New("dal")
 
+// DefaultClient is the default http client for Fetch. Similar to http.DefaultClient, but sets
+// a timeout.
+var DefaultClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
+
 // FetchConfig holds all the information needed by dal.Fetch() to make a request.
 type FetchConfig struct {
 	url.URL
@@ -82,9 +88,7 @@ func (fc *FetchConfig) validate() error {
 	if fc.Client == nil {
 		// Default to creating a new client versus using http.DefaultClient,
 		// so that a timeout may be used without modifying http.DefaultClient
-		fc.Client = &http.Client{
-			Timeout: 15 * time.Second,
-		}
+		fc.Client = DefaultClient
 	}
 
 	return nil
@@ -205,6 +209,7 @@ func Delete(rawurl string) ([]byte, error) {
 	fc := FetchConfig{
 		URL:    *u,
 		Method: http.MethodDelete,
+		Client: DefaultClient,
 	}
 	return Fetch(fc)
 }
@@ -222,6 +227,7 @@ func Get(rawurl string) ([]byte, error) {
 	fc := FetchConfig{
 		URL:    *u,
 		Method: http.MethodGet,
+		Client: DefaultClient,
 	}
 	return Fetch(fc)
 }
@@ -239,6 +245,7 @@ func Head(rawurl string) ([]byte, error) {
 	fc := FetchConfig{
 		URL:    *u,
 		Method: http.MethodHead,
+		Client: DefaultClient,
 	}
 	return Fetch(fc)
 }
@@ -257,6 +264,7 @@ func Patch(rawurl string, body []byte) ([]byte, error) {
 		URL:    *u,
 		Method: http.MethodPatch,
 		Body:   body,
+		Client: DefaultClient,
 	}
 	return Fetch(fc)
 }
@@ -275,6 +283,7 @@ func Post(rawurl string, body []byte) ([]byte, error) {
 		URL:    *u,
 		Method: http.MethodPost,
 		Body:   body,
+		Client: DefaultClient,
 	}
 	return Fetch(fc)
 }
@@ -293,6 +302,7 @@ func Put(rawurl string, body []byte) ([]byte, error) {
 		URL:    *u,
 		Method: http.MethodPut,
 		Body:   body,
+		Client: DefaultClient,
 	}
 	return Fetch(fc)
 }
