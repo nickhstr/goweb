@@ -3,6 +3,7 @@ package dal_test
 import (
 	"bytes"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/nickhstr/goweb/dal"
@@ -10,10 +11,52 @@ import (
 	"gopkg.in/h2non/gock.v1"
 )
 
-// func TestFetchConfigValidate(t *testing.T) {
-// 	assert := assert.New(t)
+func TestFetchConfigValidate(t *testing.T) {
+	assert := assert.New(t)
 
-// }
+	tests := []struct {
+		fc        *dal.FetchConfig
+		shouldErr bool
+	}{
+		{
+			nil,
+			true,
+		},
+		{
+			&dal.FetchConfig{},
+			true,
+		},
+		{
+			&dal.FetchConfig{
+				Request: nil,
+				Client:  dal.DefaultClient,
+			},
+			true,
+		},
+		{
+			&dal.FetchConfig{
+				Request: &http.Request{
+					Method: http.MethodGet,
+					URL: &url.URL{
+						Scheme: "http",
+						Host:   "foo.com",
+						Path:   "/bar",
+					},
+				},
+				Client: dal.DefaultClient,
+			},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		if test.shouldErr {
+			assert.Error(test.fc.Validate(), "Validate should return an error: %t", test.shouldErr)
+		} else {
+			assert.Nil(test.fc.Validate(), "Validate should return an error: %t", test.shouldErr)
+		}
+	}
+}
 
 func TestGet(t *testing.T) {
 	assert := assert.New(t)
