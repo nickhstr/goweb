@@ -95,7 +95,7 @@ func Test() error {
 	env := map[string]string{
 		"GO_ENV": "test",
 	}
-	err = sh.RunWith(env, "go", "test", "-race", "-v", "./...")
+	err = sh.RunWith(env, "go", "test", "-race", "./...")
 	if err != nil {
 		return err
 	}
