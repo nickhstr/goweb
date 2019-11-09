@@ -39,6 +39,8 @@ func level(logLevel string) zerolog.Level {
 		return zerolog.InfoLevel
 	case "debug":
 		return zerolog.DebugLevel
+	case "test":
+		return zerolog.PanicLevel
 	case "production":
 		fallthrough
 	default:
