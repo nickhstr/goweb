@@ -1,14 +1,12 @@
 package dal
 
 import (
-	"bytes"
 	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,142 +18,88 @@ import (
 
 var log = logger.New("dal")
 
+// DefaultClient is the default http client for Fetch. Similar to http.DefaultClient, but sets
+// a timeout.
+var DefaultClient = &http.Client{
+	Timeout: 15 * time.Second,
+}
+
 // FetchConfig holds all the information needed by dal.Fetch() to make a request.
 type FetchConfig struct {
-	url.URL
-	// Method describes which request method to use.
-	Method string
-	// Body store the request's body.
-	Body []byte
-	http.Header
-	// Optionally provide an http.Client
-	// When not set, a new client is created in fc.validate()
+	*http.Request
 	*http.Client
-	// Query is the url.Values form of the request's query params.
-	// These are to be encoded for use by URL's RawQuery.
-	Query url.Values
 	// TTL is the time to live for a request's response in cache
 	TTL time.Duration
 	// CacheKey offers an optional key to use in place of the default key.
 	// When defined, the response body of the request will be cached, no
 	// matter the Method used.
 	CacheKey string
+	// Opt out of using the cache
+	NoCache bool
 }
 
-func (fc *FetchConfig) composeRawQuery() {
-	// URL.RawQuery has higher priority over Query. Only set it if does not
-	// already have a query.
-	if fc.URL.RawQuery == "" {
-		fc.URL.RawQuery = fc.Query.Encode()
-	}
-}
-
-// String reassembles the URL and Query into a valid URL string.
-func (fc *FetchConfig) String() string {
-	fc.composeRawQuery()
-
-	return fc.URL.String()
-}
-
-// Verifies that the given FetchConfig has the basic pieces of information supplied.
-func (fc *FetchConfig) validate() error {
+// Validate verifies that the given FetchConfig has the basic pieces of information supplied.
+func (fc *FetchConfig) Validate() error {
 	if fc == nil {
-		return errors.New("no FetchConfig provided")
+		return errors.New("dal.FetchConfig: no FetchConfig provided")
 	}
-	if fc.URL == (url.URL{}) {
-		return errors.New("empty URL config provided")
-	}
-	if fc.Scheme == "" {
-		return errors.New("no Scheme provided")
-	}
-	if fc.Host == "" {
-		return errors.New("no Host provided")
-	}
-	if fc.Method == "" {
-		fc.Method = http.MethodGet
-	}
-	if fc.CacheKey == "" && fc.Method == http.MethodGet {
-		// Only set CacheKey when not already provided and the method is GET
-		// Otherwise, leave empty to avoid using the cache
-		fc.CacheKey = "dal:" + fc.String()
+	if fc.Request == nil {
+		return errors.New("dal.FetchConfig: no Request provided")
 	}
 	if fc.Client == nil {
 		// Default to creating a new client versus using http.DefaultClient,
 		// so that a timeout may be used without modifying http.DefaultClient
-		fc.Client = &http.Client{
-			Timeout: 15 * time.Second,
+		fc.Client = DefaultClient
+	}
+	if fc.CacheKey == "" {
+		fc.CacheKey = "dal:" + fc.URL.String()
+	}
+	if !fc.NoCache {
+		switch fc.Method {
+		case http.MethodGet:
+			fc.NoCache = false
+		default:
+			fc.NoCache = true
 		}
 	}
 
 	return nil
 }
 
-// NewRequest creates an http.Request from a FetchConfig.
-func (fc *FetchConfig) NewRequest() (*http.Request, error) {
-	var (
-		req *http.Request
-		err error
-	)
-
-	// Create body ready for requests with a non nil body
-	reqBody := bytes.NewBuffer(fc.Body)
-	req, err = http.NewRequest(fc.Method, fc.String(), reqBody)
-	if err != nil {
-		return req, err
-	}
-
-	// Canonicalize the headers
-	if fc.Header != nil {
-		for key, val := range fc.Header {
-			key = http.CanonicalHeaderKey(key)
-			req.Header[key] = val
-		}
-	}
-
-	return req, nil
-}
-
 // Fetch makes a request, caches its response, and returns the response body.
 // By default, the cache is only used for GET requests. For all
-// other methods, fc.CacheKey must be defined
-func Fetch(fc FetchConfig) ([]byte, error) {
+// other methods, fc.CacheKey must be defined.
+func Fetch(fc *FetchConfig) ([]byte, error) {
 	var (
 		response []byte
 		err      error
 		ttl      = fc.TTL
 	)
 
-	err = fc.validate()
+	err = fc.Validate()
 	if err != nil {
 		return response, err
 	}
 
-	fetchURL := fc.String()
+	fetchURL := fc.URL.String()
 	start := time.Now()
 
-	// Try to get response from cache
-	cachedResp, err := cache.Get(fc.CacheKey)
-	if err == nil {
-		log.Info().
-			Str("url", fetchURL).
-			Str("response-time", time.Since(start).String()).
-			Bool("redis", true).
-			Msg("DAL request")
+	if !fc.NoCache {
+		// Try to get response from cache
+		cachedResp, err := cache.Get(fc.CacheKey)
+		if err == nil {
+			log.Info().
+				Str("url", fetchURL).
+				Str("response-time", time.Since(start).String()).
+				Bool("redis", true).
+				Msg("DAL request")
 
-		return cachedResp, nil
+			return cachedResp, nil
+		}
 	}
 
-	// Create request
-	req, err := fc.NewRequest()
-	if err != nil {
-		log.Error().
-			Str("url", fetchURL).
-			Err(err).
-			Msg(err.Error())
-		return response, err
-	}
 	// Make request
-	resp, err := fc.Client.Do(req)
+	resp, err := fc.Client.Do(fc.Request)
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).
@@ -165,7 +109,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 	}
 
 	if fc.TTL == 0 {
-		ttl = ttlFromResponse(resp)
+		ttl = TTLFromResponse(resp)
 	}
 
 	log.Info().
@@ -175,7 +119,7 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 		Bool("redis", false).
 		Msg("DAL request")
 
-	body, err := responseBody(resp)
+	body, err := ResponseBody(resp)
 	if err != nil {
 		log.Error().
 			Str("url", fetchURL).
@@ -184,8 +128,10 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 		return []byte{}, err
 	}
 
-	// Try to store response in cache
-	cache.Set(fc.CacheKey, body, ttl)
+	if !fc.NoCache {
+		// Try to store response in cache
+		cache.Set(fc.CacheKey, body, ttl)
+	}
 
 	return body, nil
 }
@@ -193,106 +139,54 @@ func Fetch(fc FetchConfig) ([]byte, error) {
 /***** Fetch Wrappers *****/
 
 // Delete is a convenience wrapper for Fetch.
-func Delete(rawurl string) ([]byte, error) {
+func Delete(url string) ([]byte, error) {
 	var err error
 
-	u, err := url.Parse(rawurl)
+	r, err := http.NewRequest(http.MethodDelete, url, nil)
 	if err != nil {
-		err := fmt.Errorf("dal.Delete URL parse error: %w", err)
+		err = fmt.Errorf("dal.Delete: http.NewRequest error: %w", err)
 		return []byte{}, err
 	}
 
-	fc := FetchConfig{
-		URL:    *u,
-		Method: http.MethodDelete,
+	fc := &FetchConfig{
+		Request: r,
+		Client:  DefaultClient,
 	}
 	return Fetch(fc)
 }
 
 // Get is a convenience wrapper for Fetch.
-func Get(rawurl string) ([]byte, error) {
+func Get(url string) ([]byte, error) {
 	var err error
 
-	u, err := url.Parse(rawurl)
+	r, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		err := fmt.Errorf("dal.Get URL parse error: %w", err)
+		err = fmt.Errorf("dal.Get: http.NewRequest error: %w", err)
 		return []byte{}, err
 	}
 
-	fc := FetchConfig{
-		URL:    *u,
-		Method: http.MethodGet,
-	}
-	return Fetch(fc)
-}
-
-// Head is a convenience wrapper for Fetch.
-func Head(rawurl string) ([]byte, error) {
-	var err error
-
-	u, err := url.Parse(rawurl)
-	if err != nil {
-		err := fmt.Errorf("dal.Head URL parse error: %w", err)
-		return []byte{}, err
-	}
-
-	fc := FetchConfig{
-		URL:    *u,
-		Method: http.MethodHead,
-	}
-	return Fetch(fc)
-}
-
-// Patch is a convenience wrapper for Fetch.
-func Patch(rawurl string, body []byte) ([]byte, error) {
-	var err error
-
-	u, err := url.Parse(rawurl)
-	if err != nil {
-		err := fmt.Errorf("dal.Patch URL parse error: %w", err)
-		return []byte{}, err
-	}
-
-	fc := FetchConfig{
-		URL:    *u,
-		Method: http.MethodPatch,
-		Body:   body,
+	fc := &FetchConfig{
+		Request: r,
+		Client:  DefaultClient,
 	}
 	return Fetch(fc)
 }
 
 // Post is a convenience wrapper for Fetch.
-func Post(rawurl string, body []byte) ([]byte, error) {
+func Post(url, contentType string, body io.Reader) ([]byte, error) {
 	var err error
 
-	u, err := url.Parse(rawurl)
+	r, err := http.NewRequest(http.MethodPost, url, body)
 	if err != nil {
-		err := fmt.Errorf("dal.Post URL parse error: %w", err)
+		err = fmt.Errorf("dal.Post: http.NewRequest error: %w", err)
 		return []byte{}, err
 	}
 
-	fc := FetchConfig{
-		URL:    *u,
-		Method: http.MethodPost,
-		Body:   body,
-	}
-	return Fetch(fc)
-}
+	r.Header.Set("Content-Type", contentType)
 
-// Put is a convenience wrapper for Fetch.
-func Put(rawurl string, body []byte) ([]byte, error) {
-	var err error
-
-	u, err := url.Parse(rawurl)
-	if err != nil {
-		err := fmt.Errorf("dal.Put URL parse error: %w", err)
-		return []byte{}, err
-	}
-
-	fc := FetchConfig{
-		URL:    *u,
-		Method: http.MethodPut,
-		Body:   body,
+	fc := &FetchConfig{
+		Request: r,
+		Client:  DefaultClient,
 	}
 	return Fetch(fc)
 }
@@ -302,12 +196,12 @@ func Put(rawurl string, body []byte) ([]byte, error) {
 // Used for ttlFromResponse
 var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 
-// Attempts to get a TTL value from a response's "cache-control" header.
-// Otherwise, the given default TTL is used.
-func ttlFromResponse(r *http.Response) time.Duration {
+// TTLFromResponse attempts to get a TTL value from a response's "cache-control" header,
+// otherwise returning a default.
+func TTLFromResponse(r *http.Response) time.Duration {
 	var ttl time.Duration
 
-	headerKey := http.CanonicalHeaderKey("cache-control")
+	headerKey := http.CanonicalHeaderKey("Cache-Control")
 	cacheControlValues := r.Header[headerKey]
 
 	for _, val := range cacheControlValues {
@@ -334,11 +228,11 @@ func ttlFromResponse(r *http.Response) time.Duration {
 	return ttl
 }
 
-// Returns the response's body, with support for gzipped responses.
-func responseBody(resp *http.Response) ([]byte, error) {
+// ResponseBody returns the response's body data, with support for gzipped responses.
+func ResponseBody(resp *http.Response) ([]byte, error) {
 	var reader io.ReadCloser
 
-	switch resp.Header.Get(http.CanonicalHeaderKey("content-encoding")) {
+	switch resp.Header.Get("Content-Encoding") {
 	case "gzip":
 		reader, _ = gzip.NewReader(resp.Body)
 	default:

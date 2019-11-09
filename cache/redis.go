@@ -120,6 +120,10 @@ func clientSetup() {
 		return
 	}
 
+	if client != nil {
+		return
+	}
+
 	addr := env.Get("REDIS_HOST", "localhost") + ":" + env.Get("REDIS_PORT", "6379")
 	mode := env.Get("REDIS_MODE", "server")
 	maxRetries := 1

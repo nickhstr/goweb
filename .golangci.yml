@@ -4,6 +4,7 @@ linters:
     - dogsled
     - dupl
     - goconst
+    - goimports
     - golint
     - prealloc
     - unconvert

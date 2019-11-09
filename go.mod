@@ -20,4 +20,5 @@ require (
 	golang.org/x/net v0.0.0-20191003171128-d98b1b443823 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20191005200804-aed5e4c7ecf9 // indirect
+	gopkg.in/h2non/gock.v1 v1.0.15
 )
