@@ -101,6 +101,12 @@ func Create(config Config) http.Handler {
 
 	middleware = append(
 		middleware,
+		Headers(AppHeaders{
+			AppName:     config.AppName,
+			AppVersion:  config.AppVersion,
+			GitRevision: config.GitRevision,
+			Region:      config.Region,
+		}),
 		Health(HealthConfig{
 			Path: healthPath,
 			Callback: func() map[string]string {
@@ -114,12 +120,6 @@ func Create(config Config) http.Handler {
 
 				return healthResponse
 			},
-		}),
-		Headers(AppHeaders{
-			AppName:     config.AppName,
-			AppVersion:  config.AppVersion,
-			GitRevision: config.GitRevision,
-			Region:      config.Region,
 		}),
 	)
 
