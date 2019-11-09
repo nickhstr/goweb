@@ -54,12 +54,13 @@ func (fc *FetchConfig) Validate() error {
 	if fc.CacheKey == "" {
 		fc.CacheKey = "dal:" + fc.URL.String()
 	}
-
-	switch fc.Method {
-	case http.MethodGet:
-		fc.NoCache = false
-	default:
-		fc.NoCache = true
+	if !fc.NoCache {
+		switch fc.Method {
+		case http.MethodGet:
+			fc.NoCache = false
+		default:
+			fc.NoCache = true
+		}
 	}
 
 	return nil
@@ -200,18 +201,23 @@ var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 func TTLFromResponse(r *http.Response) time.Duration {
 	var ttl time.Duration
 
-	cc := r.Header.Get("Cache-Control")
-	match := maxAgeRegex.FindString(cc)
+	headerKey := http.CanonicalHeaderKey("Cache-Control")
+	cacheControlValues := r.Header[headerKey]
 
-	if match != "" {
-		maxAgeKeyVal := strings.Split(match, "=")
-		maxAge, err := strconv.Atoi(maxAgeKeyVal[1])
-		if err != nil {
-			log.Error().
-				Err(err).
-				Msgf("Failed to convert %s to an integer", maxAgeKeyVal[1])
+	for _, val := range cacheControlValues {
+		match := maxAgeRegex.FindString(val)
+
+		if match != "" {
+			maxAgeKeyVal := strings.Split(match, "=")
+			maxAge, err := strconv.Atoi(maxAgeKeyVal[1])
+			if err != nil {
+				log.Error().
+					Err(err).
+					Msgf("Failed to convert %s to an integer", maxAgeKeyVal[1])
+			}
+			ttl = time.Duration(maxAge) * time.Second
+			break
 		}
-		ttl = time.Duration(maxAge) * time.Second
 	}
 
 	if ttl == 0 {
