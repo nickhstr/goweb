@@ -4,9 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/rs/zerolog"
-
 	"github.com/nickhstr/goweb/logger"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
