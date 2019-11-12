@@ -1,5 +1,3 @@
-[![built with mage](https://magefile.org/badge.svg)](https://magefile.org/)
-
 # goweb
 A collection of reusable Go packages for web development. The goal is to remain simple
 and idiomatic, while adhering to the standard library's APIs when possible.
@@ -23,13 +21,9 @@ Note: Go modules are the only supported dependency tool.
 ## Contributors
 
 ### Setup
-Install `mage`:
-
-`go install github.com/magefile/mage`
-
 Install dependencies:
 
-`mage` or `mage install`
+`make` or `make install`
 
 ### Workflow
-Run `mage -l` to view the available common tasks, such as linting, testing, etc.
+Run `make -l` to view the available common tasks, such as linting, testing, etc.
