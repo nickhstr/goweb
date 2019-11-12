@@ -9,7 +9,7 @@ require (
 	github.com/golangci/golangci-lint v1.21.0
 	github.com/gorilla/handlers v1.4.2
 	github.com/joho/godotenv v1.3.0
-	github.com/magefile/mage v1.9.0
+	github.com/magefile/mage v1.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.9 // indirect
 	github.com/newrelic/go-agent v2.13.0+incompatible
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
