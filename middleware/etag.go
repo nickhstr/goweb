@@ -28,6 +28,12 @@ func (e *EtagWriter) Flush() {
 }
 
 func (e *EtagWriter) Write(p []byte) (int, error) {
+	// Don't generate etag for error status codes
+	if e.status >= 400 {
+		e.ResponseWriter.WriteHeader(e.status)
+		return e.ResponseWriter.Write(p)
+	}
+
 	// `weak` should be true when the ResponseWriter is a Flusher, as that
 	// indicates the response body can be streamed
 	_, weak := e.ResponseWriter.(http.Flusher)
