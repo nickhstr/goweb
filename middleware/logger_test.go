@@ -15,7 +15,7 @@ func TestStatusRecorder(t *testing.T) {
 
 	tests := []struct {
 		msg string
-		http.HandlerFunc
+		http.Handler
 		expectedCode int
 	}{
 		{
@@ -37,7 +37,7 @@ func TestStatusRecorder(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		test.HandlerFunc.ServeHTTP(sr, req)
+		test.Handler.ServeHTTP(sr, req)
 
 		assert.Equal(test.expectedCode, sr.status, test.msg)
 	}
