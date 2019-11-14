@@ -37,7 +37,7 @@ func setupEnv() func() {
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestDel(t *testing.T) {
 	assert := assert.New(t)
 	restoreEnv := setupEnv()
 	defer restoreEnv()
