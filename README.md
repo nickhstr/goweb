@@ -26,4 +26,4 @@ Install dependencies:
 `make` or `make install`
 
 ### Workflow
-Run `make -l` to view the available common tasks, such as linting, testing, etc.
+Run `make help` to view the available common tasks, such as linting, testing, etc.
