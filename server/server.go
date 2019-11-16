@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -18,7 +19,8 @@ import (
 var log = logger.New("server")
 
 // Start creates and starts a server, listening on "address"
-func Start(mux http.Handler) {
+func Start(mux http.Handler) error {
+	// Default server timout, in seconds
 	const defaultTimeout = 15
 	var (
 		address  string
@@ -26,11 +28,14 @@ func Start(mux http.Handler) {
 		err      error
 	)
 
-	address = net.JoinHostPort(Host(), Port())
+	address = net.JoinHostPort(Host(), env.Get("PORT", "3000"))
 	listener, err = PreferredListener(address)
 	if err != nil {
 		// Non-nil error means the address wanted is taken. Time to find a free one.
-		listener = FreePortListener()
+		listener, err = FreePortListener()
+		if err != nil {
+			return err
+		}
 		if listener != nil {
 			address = listener.Addr().String()
 		}
@@ -41,6 +46,7 @@ func Start(mux http.Handler) {
 		log.Error().
 			Err(err).
 			Msg("Failed to convert 'DNS_CACHE_ENABLED' to bool")
+		return err
 	}
 	// TTL measured in seconds
 	dnsCacheTTL, err := strconv.Atoi(env.Get("DNS_CACHE_TTL", "300"))
@@ -48,6 +54,7 @@ func Start(mux http.Handler) {
 		log.Error().
 			Err(err).
 			Msg("Failed to convert 'DNS_CACHE_TTL' to int")
+		return err
 	}
 	DNSCache(
 		dnsCacheEnabled,
@@ -59,7 +66,7 @@ func Start(mux http.Handler) {
 		log.Error().
 			Err(err).
 			Msg("Invalid SERVER_TIMEOUT set")
-		srvTimeout = defaultTimeout
+		return err
 	}
 
 	srv := &http.Server{
@@ -81,9 +88,12 @@ func Start(mux http.Handler) {
 		log.Fatal().
 			Err(err).
 			Msg("Server failed to start")
+		return err
 	}
 
 	<-idlConnsClosed
+
+	return nil
 }
 
 // Shutdown server gracefully on SIGINT or SIGTERM
@@ -127,14 +137,13 @@ func PreferredListener(addr string) (net.Listener, error) {
 }
 
 // FreePortListener will return a listener for any available port on the Host.
-func FreePortListener() net.Listener {
+func FreePortListener() (net.Listener, error) {
 	listener, err := net.Listen("tcp", net.JoinHostPort(Host(), "0"))
 	if err != nil {
-		// If this can't find a free port, we need to start panicking!
-		panic(err)
+		return nil, fmt.Errorf("FreePortListener could not find free port: %w", err)
 	}
 
-	return listener
+	return listener, nil
 }
 
 // Host gets the host for a listener's address.
@@ -148,9 +157,4 @@ func Host() string {
 	}
 
 	return env.Get("HOST", defaultHost)
-}
-
-// Port gets the port for a listener's address.
-func Port() string {
-	return env.Get("PORT", "3000")
 }
