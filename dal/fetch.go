@@ -199,7 +199,8 @@ var maxAgeRegex = regexp.MustCompile(`max-age=\d+`)
 // TTLFromResponse attempts to get a TTL value from a response's "cache-control" header,
 // otherwise returning a default.
 func TTLFromResponse(r *http.Response) time.Duration {
-	var ttl time.Duration
+	// Number of seconds for ttl
+	var ttl int
 
 	headerKey := http.CanonicalHeaderKey("Cache-Control")
 	cacheControlValues := r.Header[headerKey]
@@ -210,22 +211,18 @@ func TTLFromResponse(r *http.Response) time.Duration {
 		if match != "" {
 			maxAgeKeyVal := strings.Split(match, "=")
 			maxAge, err := strconv.Atoi(maxAgeKeyVal[1])
-			if err != nil {
-				log.Error().
-					Err(err).
-					Msgf("Failed to convert %s to an integer", maxAgeKeyVal[1])
+			if err == nil {
+				ttl = maxAge
+				break
 			}
-			ttl = time.Duration(maxAge) * time.Second
-			break
 		}
 	}
 
 	if ttl == 0 {
-		defaultTTL := 60 * time.Second
-		ttl = defaultTTL
+		ttl = 60
 	}
 
-	return ttl
+	return time.Duration(ttl) * time.Second
 }
 
 // ResponseBody returns the response's body data, with support for gzipped responses.
