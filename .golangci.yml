@@ -1,5 +1,4 @@
 linters:
-  fast: true
   enable:
     - dogsled
     - dupl
@@ -7,6 +6,7 @@ linters:
     - goimports
     - golint
     - prealloc
+    - staticcheck
     - unconvert
     - unused
 
@@ -14,3 +14,7 @@ issues:
   # Disable max issues
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-rules:
+    - text: "SA1019:"
+      linters:
+        - staticcheck
