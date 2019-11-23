@@ -75,10 +75,7 @@ func Create(config Config) http.Handler {
 	}
 
 	if config.Auth {
-		secretKey := env.Get("SECRET_KEY")
-		if secretKey == "" {
-			secretKey = "keyboard cat"
-		}
+		secretKey := env.Get("SECRET_KEY", "i am iron man")
 
 		wl := []string{"/", healthPath}
 		if config.WhiteList != nil {
