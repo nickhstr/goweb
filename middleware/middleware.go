@@ -41,6 +41,7 @@ type Config struct {
 	AppName           string
 	AppVersion        string
 	Compress          bool
+	Debug             bool
 	EnvVarsToValidate []string
 	Etag              bool
 	GitRevision       string
@@ -122,6 +123,10 @@ func Create(config Config) http.Handler {
 
 	if config.Compress {
 		middleware = append(middleware, handlers.CompressHandler)
+	}
+
+	if config.Debug {
+		middleware = append(middleware, Debug)
 	}
 
 	return Compose(
