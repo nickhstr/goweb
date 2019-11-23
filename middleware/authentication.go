@@ -3,6 +3,7 @@ package middleware
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 )
 
 // AuthConfig holds the necessary values for the authentication middleware
@@ -27,6 +28,12 @@ func Auth(config AuthConfig) Middleware {
 		config.ErrorMessage = defaultErrorMessage
 	}
 
+	wlRegexps := make([]*regexp.Regexp, 0, len(config.WhiteList))
+	for _, pattern := range config.WhiteList {
+		r := regexp.MustCompile(pattern)
+		wlRegexps = append(wlRegexps, r)
+	}
+
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var (
@@ -46,8 +53,8 @@ func Auth(config AuthConfig) Middleware {
 				invalidKey = true
 			}
 
-			for _, route := range config.WhiteList {
-				if r.URL.Path == route {
+			for _, re := range wlRegexps {
+				if re.MatchString(r.URL.Path) {
 					whitelistRoute = true
 					break
 				}
