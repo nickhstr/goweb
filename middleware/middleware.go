@@ -62,18 +62,19 @@ func Create(config Config) http.Handler {
 		middleware []Middleware
 	)
 
-	// Add initial middleware
-	middleware = append(
-		middleware,
-		Logger,
-		Recover,
-	)
-
 	err := env.ValidateEnvVars(config.EnvVarsToValidate)
 	if err != nil {
 		// Log invalid env vars and exit
 		log.Fatal().Err(err).Msg("Invalid environment variables")
 	}
+
+	// Add initial middleware
+	middleware = append(
+		middleware,
+		Logger,
+		Recover,
+		Secure(config.SecureOptions),
+	)
 
 	if config.Auth {
 		secretKey := env.Get("SECRET_KEY", "i am iron man")
@@ -90,8 +91,6 @@ func Create(config Config) http.Handler {
 			SecretKey: hex.EncodeToString(secretHash[:]),
 		}))
 	}
-
-	middleware = append(middleware, Secure(config.SecureOptions))
 
 	if config.Etag {
 		middleware = append(middleware, Etag)
