@@ -10,8 +10,6 @@ import (
 )
 
 func TestHeaders(t *testing.T) {
-	assert := assert.New(t)
-
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -19,7 +17,7 @@ func TestHeaders(t *testing.T) {
 	})
 
 	tests := []struct {
-		msg string
+		name string
 		middleware.AppHeaders
 		expectedHeaders map[string]string
 	}{
@@ -40,24 +38,27 @@ func TestHeaders(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		var matchingHeaders = true
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			matchingHeaders := true
 
-		handler := middleware.Headers(test.AppHeaders)(helloHandler)
-		respRec := httptest.NewRecorder()
+			handler := middleware.Headers(test.AppHeaders)(helloHandler)
+			respRec := httptest.NewRecorder()
 
-		req, err := http.NewRequest(http.MethodGet, "/", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		handler.ServeHTTP(respRec, req)
-
-		for key, val := range respRec.Header() {
-			if val[0] != test.expectedHeaders[key] {
-				matchingHeaders = false
+			req, err := http.NewRequest(http.MethodGet, "/", nil)
+			if err != nil {
+				t.Fatal(err)
 			}
-		}
 
-		assert.True(matchingHeaders, test.msg)
+			handler.ServeHTTP(respRec, req)
+
+			for key, val := range respRec.Header() {
+				if val[0] != test.expectedHeaders[key] {
+					matchingHeaders = false
+				}
+			}
+
+			assert.True(matchingHeaders)
+		})
 	}
 }

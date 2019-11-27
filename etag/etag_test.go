@@ -8,10 +8,8 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	assert := assert.New(t)
-
 	tests := []struct {
-		msg         string
+		name        string
 		data        []byte
 		weak        bool
 		hash        string
@@ -41,10 +39,14 @@ func TestGenerate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if test.shouldEqual {
-			assert.Equal(test.hash, etag.Generate(test.data, test.weak), test.msg)
-		} else {
-			assert.NotEqual(test.hash, etag.Generate(test.data, test.weak), test.msg)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			if test.shouldEqual {
+				assert.Equal(test.hash, etag.Generate(test.data, test.weak))
+			} else {
+				assert.NotEqual(test.hash, etag.Generate(test.data, test.weak))
+			}
+		})
 	}
 }

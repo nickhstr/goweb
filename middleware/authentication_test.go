@@ -11,8 +11,6 @@ import (
 )
 
 func TestAuth(t *testing.T) {
-	assert := assert.New(t)
-
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -26,7 +24,7 @@ func TestAuth(t *testing.T) {
 	}
 
 	tests := []struct {
-		msg string
+		name string
 		AuthConfig
 		requestPath  string
 		expectedCode int
@@ -81,22 +79,25 @@ func TestAuth(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		respRec := httptest.NewRecorder()
-		handler := Auth(test.AuthConfig)(helloHandler)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			respRec := httptest.NewRecorder()
+			handler := Auth(test.AuthConfig)(helloHandler)
 
-		req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+			req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		handler.ServeHTTP(respRec, req)
+			handler.ServeHTTP(respRec, req)
 
-		respBody, err := ioutil.ReadAll(respRec.Body)
-		if err != nil {
-			t.Fatal(err)
-		}
+			respBody, err := ioutil.ReadAll(respRec.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		assert.Equal(test.expectedCode, respRec.Code, test.msg)
-		assert.Equal(test.expectedBody, respBody, test.msg)
+			assert.Equal(test.expectedCode, respRec.Code)
+			assert.Equal(test.expectedBody, respBody)
+		})
 	}
 }

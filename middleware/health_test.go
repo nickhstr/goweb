@@ -12,8 +12,6 @@ import (
 )
 
 func TestHealth(t *testing.T) {
-	assert := assert.New(t)
-
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -33,7 +31,7 @@ func TestHealth(t *testing.T) {
 	}
 
 	tests := []struct {
-		msg string
+		name string
 		middleware.HealthConfig
 		requestPath  string
 		expectedBody []byte
@@ -65,21 +63,24 @@ func TestHealth(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		handler := middleware.Health(test.HealthConfig)(helloHandler)
-		respRec := httptest.NewRecorder()
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			handler := middleware.Health(test.HealthConfig)(helloHandler)
+			respRec := httptest.NewRecorder()
 
-		req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+			req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		handler.ServeHTTP(respRec, req)
+			handler.ServeHTTP(respRec, req)
 
-		respBody, err := ioutil.ReadAll(respRec.Body)
-		if err != nil {
-			t.Fatal(err)
-		}
+			respBody, err := ioutil.ReadAll(respRec.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		assert.Equal(test.expectedBody, respBody, test.msg)
+			assert.Equal(test.expectedBody, respBody)
+		})
 	}
 }

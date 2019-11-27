@@ -10,18 +10,18 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	assert := assert.New(t)
-
 	type levelWillLog struct {
 		logEventEmitter func() *zerolog.Event
 		shouldLog       bool
 	}
 
 	tests := []struct {
+		name        string
 		goEnv       string
 		levelsToLog func(logger.Logger) []levelWillLog
 	}{
 		{
+			"logger should log at production level",
 			"production",
 			func(log logger.Logger) []levelWillLog {
 				return []levelWillLog{
@@ -45,6 +45,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
+			"logger should log at development level",
 			"development",
 			func(log logger.Logger) []levelWillLog {
 				return []levelWillLog{
@@ -68,6 +69,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		{
+			"logger should log at debug level",
 			"debug",
 			func(log logger.Logger) []levelWillLog {
 				return []levelWillLog{
@@ -93,20 +95,25 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ogEnv := os.Getenv("GO_ENV")
-		os.Setenv("GO_ENV", test.goEnv)
-		defer os.Setenv("GO_ENV", ogEnv)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
 
-		log := logger.New("test")
-		levelsToLog := test.levelsToLog(log)
+			ogEnv := os.Getenv("GO_ENV")
+			os.Setenv("GO_ENV", test.goEnv)
+			defer os.Setenv("GO_ENV", ogEnv)
 
-		for _, level := range levelsToLog {
-			if level.shouldLog {
-				assert.NotNil(level.logEventEmitter())
-			} else {
-				assert.Nil(level.logEventEmitter())
+			log := logger.New("test")
+			levelsToLog := test.levelsToLog(log)
+
+			for _, level := range levelsToLog {
+				if level.shouldLog {
+					assert.NotNil(level.logEventEmitter())
+				} else {
+					assert.Nil(level.logEventEmitter())
+				}
 			}
-		}
+		})
+
 	}
 }
 

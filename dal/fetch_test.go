@@ -13,21 +13,23 @@ import (
 )
 
 func TestFetchConfigValidate(t *testing.T) {
-	assert := assert.New(t)
-
 	tests := []struct {
+		name      string
 		fc        *dal.FetchConfig
 		shouldErr bool
 	}{
 		{
+			"Validate should return an error",
 			nil,
 			true,
 		},
 		{
+			"Validate should return an error",
 			&dal.FetchConfig{},
 			true,
 		},
 		{
+			"Validate should not return an error",
 			&dal.FetchConfig{
 				Request: &http.Request{
 					Method: http.MethodGet,
@@ -41,6 +43,7 @@ func TestFetchConfigValidate(t *testing.T) {
 			false,
 		},
 		{
+			"Validate should not return an error",
 			&dal.FetchConfig{
 				Request: &http.Request{
 					Method: http.MethodGet,
@@ -57,22 +60,25 @@ func TestFetchConfigValidate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if test.shouldErr {
-			assert.Error(test.fc.Validate(), "Validate should return an error: %t", test.shouldErr)
-		} else {
-			assert.Nil(test.fc.Validate(), "Validate should return an error: %t", test.shouldErr)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			if test.shouldErr {
+				assert.Error(test.fc.Validate())
+			} else {
+				assert.Nil(test.fc.Validate())
+			}
+		})
 	}
 }
 
 func TestFetch(t *testing.T) {
-	assert := assert.New(t)
 	gock.InterceptClient(dal.DefaultClient)
 	defer gock.Off()
 	defer gock.RestoreClient(dal.DefaultClient)
 
 	tests := []struct {
-		msg          string
+		name         string
 		fc           *dal.FetchConfig
 		expectedData []byte
 	}{
@@ -108,30 +114,32 @@ func TestFetch(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bodyReader := bytes.NewBuffer(test.expectedData)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			bodyReader := bytes.NewBuffer(test.expectedData)
 
-		gock.Intercept()
-		req := gock.NewRequest().SetURL(test.fc.URL)
-		req.Method = test.fc.Method
-		exp := gock.NewMock(req, gock.NewResponse())
-		gock.Register(exp)
-		req.Reply(http.StatusOK).Body(bodyReader)
+			gock.Intercept()
+			req := gock.NewRequest().SetURL(test.fc.URL)
+			req.Method = test.fc.Method
+			exp := gock.NewMock(req, gock.NewResponse())
+			gock.Register(exp)
+			req.Reply(http.StatusOK).Body(bodyReader)
 
-		resp, err := dal.Fetch(test.fc)
+			resp, err := dal.Fetch(test.fc)
 
-		assert.Nil(err, test.msg)
-		assert.Equal(test.expectedData, resp, test.msg)
+			assert.Nil(err)
+			assert.Equal(test.expectedData, resp)
+		})
 	}
 }
 
 func TestDelete(t *testing.T) {
-	assert := assert.New(t)
 	gock.InterceptClient(dal.DefaultClient)
 	defer gock.Off()
 	defer gock.RestoreClient(dal.DefaultClient)
 
 	tests := []struct {
-		msg          string
+		name         string
 		uri          string
 		expectedData []byte
 	}{
@@ -148,28 +156,30 @@ func TestDelete(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bodyReader := bytes.NewBuffer(test.expectedData)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			bodyReader := bytes.NewBuffer(test.expectedData)
 
-		gock.New(test.uri).
-			Delete("/").
-			Reply(http.StatusOK).
-			Body(bodyReader)
+			gock.New(test.uri).
+				Delete("/").
+				Reply(http.StatusOK).
+				Body(bodyReader)
 
-		resp, err := dal.Delete(test.uri)
+			resp, err := dal.Delete(test.uri)
 
-		assert.Nil(err, test.msg)
-		assert.Equal(test.expectedData, resp, test.msg)
+			assert.Nil(err)
+			assert.Equal(test.expectedData, resp)
+		})
 	}
 }
 
 func TestGet(t *testing.T) {
-	assert := assert.New(t)
 	gock.InterceptClient(dal.DefaultClient)
 	defer gock.Off()
 	defer gock.RestoreClient(dal.DefaultClient)
 
 	tests := []struct {
-		msg          string
+		name         string
 		uri          string
 		expectedData []byte
 	}{
@@ -186,28 +196,30 @@ func TestGet(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bodyReader := bytes.NewBuffer(test.expectedData)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			bodyReader := bytes.NewBuffer(test.expectedData)
 
-		gock.New(test.uri).
-			Get("/").
-			Reply(http.StatusOK).
-			Body(bodyReader)
+			gock.New(test.uri).
+				Get("/").
+				Reply(http.StatusOK).
+				Body(bodyReader)
 
-		resp, err := dal.Get(test.uri)
+			resp, err := dal.Get(test.uri)
 
-		assert.Nil(err, test.msg)
-		assert.Equal(test.expectedData, resp, test.msg)
+			assert.Nil(err)
+			assert.Equal(test.expectedData, resp)
+		})
 	}
 }
 
 func TestPost(t *testing.T) {
-	assert := assert.New(t)
 	gock.InterceptClient(dal.DefaultClient)
 	defer gock.Off()
 	defer gock.RestoreClient(dal.DefaultClient)
 
 	tests := []struct {
-		msg          string
+		name         string
 		uri          string
 		expectedData []byte
 	}{
@@ -224,27 +236,29 @@ func TestPost(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		resBodyReader := bytes.NewBuffer(test.expectedData)
-		reqBodyReader := bytes.NewBuffer([]byte(`{"post": "message"}`))
-		contentType := "application/json"
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
 
-		gock.New(test.uri).
-			Post("/").
-			Reply(http.StatusOK).
-			Body(resBodyReader)
+			resBodyReader := bytes.NewBuffer(test.expectedData)
+			reqBodyReader := bytes.NewBuffer([]byte(`{"post": "message"}`))
+			contentType := "application/json"
 
-		resp, err := dal.Post(test.uri, contentType, reqBodyReader)
+			gock.New(test.uri).
+				Post("/").
+				Reply(http.StatusOK).
+				Body(resBodyReader)
 
-		assert.Nil(err, test.msg)
-		assert.Equal(test.expectedData, resp, test.msg)
+			resp, err := dal.Post(test.uri, contentType, reqBodyReader)
+
+			assert.Nil(err)
+			assert.Equal(test.expectedData, resp)
+		})
 	}
 }
 
 func TestTTLFromResponse(t *testing.T) {
-	assert := assert.New(t)
-
 	tests := []struct {
-		msg string
+		name string
 		*http.Response
 		expected time.Duration
 	}{
@@ -280,6 +294,9 @@ func TestTTLFromResponse(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(test.expected, dal.TTLFromResponse(test.Response), test.msg)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			assert.Equal(test.expected, dal.TTLFromResponse(test.Response))
+		})
 	}
 }

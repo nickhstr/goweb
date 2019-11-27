@@ -12,10 +12,8 @@ import (
 )
 
 func TestEtag(t *testing.T) {
-	assert := assert.New(t)
-
 	tests := []struct {
-		msg string
+		name string
 		*http.Request
 		handler        http.Handler
 		expectedStatus int
@@ -102,14 +100,18 @@ func TestEtag(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		handler := middleware.Etag(test.handler)
-		respRec := httptest.NewRecorder()
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
 
-		handler.ServeHTTP(respRec, test.Request)
-		resp := respRec.Result()
-		e := resp.Header.Get("etag")
+			handler := middleware.Etag(test.handler)
+			respRec := httptest.NewRecorder()
 
-		assert.Equal(test.expectedEtag, e, test.msg)
-		assert.Equal(test.expectedStatus, resp.StatusCode, test.msg)
+			handler.ServeHTTP(respRec, test.Request)
+			resp := respRec.Result()
+			e := resp.Header.Get("etag")
+
+			assert.Equal(test.expectedEtag, e)
+			assert.Equal(test.expectedStatus, resp.StatusCode)
+		})
 	}
 }

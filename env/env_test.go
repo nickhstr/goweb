@@ -9,14 +9,13 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	assert := assert.New(t)
 	goEnv := "GO_ENV"
 	originalVal, _ := os.LookupEnv(goEnv)
 	os.Setenv(goEnv, "test")
 	defer os.Setenv(goEnv, originalVal)
 
 	tests := []struct {
-		msg        string
+		name       string
 		envVar     string
 		defaultVal string
 		expected   string
@@ -42,7 +41,10 @@ func TestGet(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(test.expected, env.Get(test.envVar, test.defaultVal), test.msg)
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			assert.Equal(test.expected, env.Get(test.envVar, test.defaultVal))
+		})
 	}
 }
 
@@ -58,8 +60,6 @@ func TestIsProd(t *testing.T) {
 }
 
 func TestEnvVarsToValidate(t *testing.T) {
-	assert := assert.New(t)
-
 	originalGoEnv := env.Get("GO_ENV")
 	originalLogLevel := env.Get("LOG_LEVEL")
 	os.Setenv("GO_ENV", "test")
@@ -68,7 +68,7 @@ func TestEnvVarsToValidate(t *testing.T) {
 	defer os.Setenv("LOG_LEVEL", originalLogLevel)
 
 	tests := []struct {
-		msg         string
+		name        string
 		vars        []string
 		shouldError bool
 	}{
@@ -90,10 +90,14 @@ func TestEnvVarsToValidate(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if test.shouldError {
-			assert.Error(env.ValidateEnvVars(test.vars), test.msg)
-		} else {
-			assert.Nil(env.ValidateEnvVars(test.vars), test.msg)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			if test.shouldError {
+				assert.Error(env.ValidateEnvVars(test.vars))
+			} else {
+				assert.Nil(env.ValidateEnvVars(test.vars))
+			}
+		})
 	}
 }

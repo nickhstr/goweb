@@ -10,10 +10,8 @@ import (
 )
 
 func TestRecover(t *testing.T) {
-	assert := assert.New(t)
-
 	tests := []struct {
-		msg string
+		name string
 		http.Handler
 		expectedStatus int
 	}{
@@ -34,14 +32,17 @@ func TestRecover(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		handler := middleware.Recover(test.Handler)
-		respRec := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodGet, "http://foo.com", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			assert := assert.New(t)
+			handler := middleware.Recover(test.Handler)
+			respRec := httptest.NewRecorder()
+			req, err := http.NewRequest(http.MethodGet, "http://foo.com", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		assert.NotPanics(func() { handler.ServeHTTP(respRec, req) }, test.msg)
-		assert.Equal(test.expectedStatus, respRec.Result().StatusCode)
+			assert.NotPanics(func() { handler.ServeHTTP(respRec, req) })
+			assert.Equal(test.expectedStatus, respRec.Result().StatusCode)
+		})
 	}
 }
