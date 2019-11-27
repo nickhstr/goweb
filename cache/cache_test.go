@@ -75,5 +75,5 @@ func TestSet(t *testing.T) {
 	defer func() { client = ogClient }()
 	client = mockClient{}
 
-	assert.NotPanics(func() { Set("key", []byte{}, 60*time.Second) })
+	assert.NotPanics(func() { _ = Set("key", []byte{}, 60*time.Second) })
 }

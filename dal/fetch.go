@@ -129,8 +129,8 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 	}
 
 	if !fc.NoCache {
-		// Try to store response in cache
-		cache.Set(fc.CacheKey, body, ttl)
+		// Try to store response in cache, swallowing any errors
+		_ = cache.Set(fc.CacheKey, body, ttl)
 	}
 
 	return body, nil

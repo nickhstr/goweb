@@ -3,6 +3,7 @@ package cache
 import (
 	"errors"
 	"io"
+	"net"
 	"sync"
 	"time"
 
@@ -20,24 +21,24 @@ type redisClient interface {
 var log = logger.New("redis")
 var client redisClient
 var clientInit sync.Once
+var noClientMsg = "no redis client available"
 
 // Del removes data at the given key(s)
 func Del(keys ...string) error {
 	clientInit.Do(clientSetup)
+	log := log.With().Str("operation", "DEL").Logger()
 
 	var err error
 
 	if client == nil {
-		err = errors.New("no redis client available")
-		log.Error().Str("operation", "GET").Msg(err.Error())
-
+		err = errors.New(noClientMsg)
+		log.Err(err).Msg(err.Error())
 		return err
 	}
 
 	_, err = client.Del(keys...).Result()
 	if err != nil {
 		log.Warn().
-			Str("operation", "SET").
 			Err(err).
 			Msg(err.Error())
 	}
@@ -48,6 +49,7 @@ func Del(keys ...string) error {
 // Get returns the data stored under the given key.
 func Get(key string) ([]byte, error) {
 	clientInit.Do(clientSetup)
+	log := log.With().Str("operation", "GET").Logger()
 
 	var (
 		data []byte
@@ -55,9 +57,8 @@ func Get(key string) ([]byte, error) {
 	)
 
 	if client == nil {
-		err = errors.New("no redis client available")
-		log.Error().Str("operation", "GET").Msg(err.Error())
-
+		err = errors.New(noClientMsg)
+		log.Err(err).Msg(err.Error())
 		return []byte{}, err
 	}
 
@@ -65,18 +66,15 @@ func Get(key string) ([]byte, error) {
 	if err != nil {
 		if err.Error() == "redis: nil" {
 			log.Debug().
-				Str("operation", "GET").
 				Str("key", key).
 				Msg("Key not found")
 		} else if err == io.EOF {
 			log.Error().
-				Str("operation", "GET").
 				Str("key", key).
 				Err(err).
 				Msg("Redis unavailable")
 		} else {
 			log.Warn().
-				Str("operation", "GET").
 				Str("key", key).
 				Err(err).
 				Msg(err.Error())
@@ -87,24 +85,27 @@ func Get(key string) ([]byte, error) {
 }
 
 // Set stores data for a set period of time at the given key.
-func Set(key string, data []byte, expiration time.Duration) {
+func Set(key string, data []byte, expiration time.Duration) error {
 	clientInit.Do(clientSetup)
+	log := log.With().Str("operation", "SET").Logger()
+
+	var err error
 
 	if client == nil {
-		log.Error().
-			Str("operation", "SET").
-			Msg("No redis client available")
-
-		return
+		err = errors.New(noClientMsg)
+		log.Err(err).Msg(err.Error())
+		return err
 	}
 
-	_, err := client.Set(key, data, expiration).Result()
+	_, err = client.Set(key, data, expiration).Result()
 	if err != nil {
 		log.Warn().
-			Str("operation", "SET").
 			Err(err).
 			Msg(err.Error())
+		return err
 	}
+
+	return nil
 }
 
 func clientSetup() {
@@ -124,7 +125,10 @@ func clientSetup() {
 		return
 	}
 
-	addr := env.Get("REDIS_HOST", "localhost") + ":" + env.Get("REDIS_PORT", "6379")
+	addr := net.JoinHostPort(
+		env.Get("REDIS_HOST", "localhost"),
+		env.Get("REDIS_PORT", "6379"),
+	)
 	mode := env.Get("REDIS_MODE", "server")
 	maxRetries := 1
 	minRetryBackoff := 8 * time.Millisecond
