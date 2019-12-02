@@ -37,8 +37,8 @@ func Health(config HealthConfig) Middleware {
 					response = []byte("Unable to marshal health callback")
 				}
 
-				healthHandler := healthHandler(response)
-				healthHandler.ServeHTTP(w, r)
+				h := healthHandler(response)
+				h.ServeHTTP(w, r)
 			}
 		})
 	}
