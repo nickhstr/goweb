@@ -1,44 +1,42 @@
+// Package cache provides a simple key-value cache store, supporting
+// just a handful of caching operations.
 package cache
 
 import (
 	"errors"
-	"io"
-	"net"
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
-	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/cache/redis"
 	"github.com/nickhstr/goweb/logger"
 )
 
-type redisClient interface {
-	Del(...string) *redis.IntCmd
-	Get(string) *redis.StringCmd
-	Set(string, interface{}, time.Duration) *redis.StatusCmd
-}
+var log = logger.New("cache")
+var client Cacher
 
-var log = logger.New("redis")
-var client redisClient
-var clientInit sync.Once
-var noClientMsg = "no redis client available"
+// Cacher defines the methods of any cache client.
+type Cacher interface {
+	Del(...string) error
+	Get(string) ([]byte, error)
+	Set(string, interface{}, time.Duration) error
+}
 
 // Del removes data at the given key(s)
 func Del(keys ...string) error {
-	clientInit.Do(clientSetup)
+	// init default Cacher if not set already
+	CacherInit(nil)
 	log := log.With().Str("operation", "DEL").Logger()
 
 	var err error
 
 	if client == nil {
-		err = errors.New(noClientMsg)
-		log.Err(err).Msg(err.Error())
+		err = noClientLogErr(log)
 		return err
 	}
 
-	_, err = client.Del(keys...).Result()
+	err = client.Del(keys...)
 	if err != nil {
-		log.Warn().
+		log.Info().
 			Err(err).
 			Msg(err.Error())
 	}
@@ -48,7 +46,8 @@ func Del(keys ...string) error {
 
 // Get returns the data stored under the given key.
 func Get(key string) ([]byte, error) {
-	clientInit.Do(clientSetup)
+	// init default Cacher if not set already
+	CacherInit(nil)
 	log := log.With().Str("operation", "GET").Logger()
 
 	var (
@@ -57,28 +56,15 @@ func Get(key string) ([]byte, error) {
 	)
 
 	if client == nil {
-		err = errors.New(noClientMsg)
-		log.Err(err).Msg(err.Error())
+		err = noClientLogErr(log)
 		return []byte{}, err
 	}
 
-	data, err = client.Get(key).Bytes()
+	data, err = client.Get(key)
 	if err != nil {
-		if err.Error() == "redis: nil" {
-			log.Debug().
-				Str("key", key).
-				Msg("Key not found")
-		} else if err == io.EOF {
-			log.Error().
-				Str("key", key).
-				Err(err).
-				Msg("Redis unavailable")
-		} else {
-			log.Warn().
-				Str("key", key).
-				Err(err).
-				Msg(err.Error())
-		}
+		log.Info().
+			Str("key", key).
+			Msg("Cache key not found")
 	}
 
 	return data, err
@@ -86,20 +72,20 @@ func Get(key string) ([]byte, error) {
 
 // Set stores data for a set period of time at the given key.
 func Set(key string, data []byte, expiration time.Duration) error {
-	clientInit.Do(clientSetup)
+	// init default Cacher if not set already
+	CacherInit(nil)
 	log := log.With().Str("operation", "SET").Logger()
 
 	var err error
 
 	if client == nil {
-		err = errors.New(noClientMsg)
-		log.Err(err).Msg(err.Error())
+		err = noClientLogErr(log)
 		return err
 	}
 
-	_, err = client.Set(key, data, expiration).Result()
+	err = client.Set(key, data, expiration)
 	if err != nil {
-		log.Warn().
+		log.Info().
 			Err(err).
 			Msg(err.Error())
 		return err
@@ -108,59 +94,30 @@ func Set(key string, data []byte, expiration time.Duration) error {
 	return nil
 }
 
-func clientSetup() {
-	if env.Get("REDIS_HOST") == "" ||
-		env.Get("REDIS_PORT") == "" ||
-		env.Get("REDIS_MODE") == "" {
-		log.Error().
-			Str("redis-host", env.Get("REDIS_HOST")).
-			Str("redis-port", env.Get("REDIS_PORT")).
-			Str("redis-mode", env.Get("REDIS_MODE")).
-			Msg("Environment variable(s) not set")
+var cacherInit sync.Once
 
+// CacherInit sets the Cacher to be used for all cache operations.
+// If an init func is supplied, it will be used for setup; otherwise,
+// the default Cacher will be used.
+// The supplied init function must accept a Cacher as its argument, so
+// that `client` may be set.
+func CacherInit(init func() Cacher) {
+	if init == nil {
+		// default to redis.Cacher
+		cacherInit.Do(func() {
+			client = redis.New()
+		})
 		return
 	}
 
-	if client != nil {
-		return
-	}
+	cacherInit.Do(func() {
+		client = init()
+	})
+}
 
-	addr := net.JoinHostPort(
-		env.Get("REDIS_HOST", "localhost"),
-		env.Get("REDIS_PORT", "6379"),
-	)
-	mode := env.Get("REDIS_MODE", "server")
-	maxRetries := 1
-	minRetryBackoff := 8 * time.Millisecond
-	maxRetryBackoff := 512 * time.Millisecond
-	onConnect := func(c *redis.Conn) error {
-		log.Info().
-			Str("address", addr).
-			Str("mode", mode).
-			Msg("Connected to Redis")
-		return nil
-	}
-
-	switch mode {
-	case "cluster":
-		clusterOptions := &redis.ClusterOptions{
-			Addrs:           []string{addr},
-			MaxRetries:      maxRetries,
-			MinRetryBackoff: minRetryBackoff,
-			MaxRetryBackoff: maxRetryBackoff,
-			OnConnect:       onConnect,
-		}
-		client = redis.NewClusterClient(clusterOptions)
-	case "server":
-		fallthrough
-	default:
-		options := &redis.Options{
-			Addr:            addr,
-			MaxRetries:      maxRetries,
-			MinRetryBackoff: minRetryBackoff,
-			MaxRetryBackoff: maxRetryBackoff,
-			OnConnect:       onConnect,
-		}
-		client = redis.NewClient(options)
-	}
+// Creates no-client error, logs it, and returns it
+func noClientLogErr(log logger.Logger) error {
+	err := errors.New("no cache client available")
+	log.Error().Msg(err.Error())
+	return err
 }

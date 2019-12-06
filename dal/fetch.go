@@ -86,12 +86,12 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 
 	if !fc.NoCache {
 		// Try to get response from cache
-		cachedResp, err := cache.Get(fc.CacheKey)
-		if err == nil {
+		cachedResp, cacheErr := cache.Get(fc.CacheKey)
+		if cacheErr == nil {
 			log.Info().
 				Str("url", fetchURL).
 				Str("response-time", time.Since(start).String()).
-				Bool("redis", true).
+				Bool("cache", true).
 				Msg("DAL request")
 
 			return cachedResp, nil
@@ -116,7 +116,7 @@ func Fetch(fc *FetchConfig) ([]byte, error) {
 		Str("url", fetchURL).
 		Str("response-time", time.Since(start).String()).
 		Dur("ttl", ttl).
-		Bool("redis", false).
+		Bool("cache", false).
 		Msg("DAL request")
 
 	body, err := ResponseBody(resp)
