@@ -3,6 +3,7 @@
 package redis
 
 import (
+	"errors"
 	"net"
 	"strings"
 	"time"
@@ -20,14 +21,20 @@ type redisClient interface {
 	Set(string, interface{}, time.Duration) *redis.StatusCmd
 }
 
-// Cacher holds a redisClient instance, and satisfies the cache.Cacher interface.
-type Cacher struct {
+type Cacher interface {
+	Del(...string) error
+	Get(string) ([]byte, error)
+	Set(string, interface{}, time.Duration) error
+}
+
+// Client holds a redisClient instance, and satisfies the cache.Cacher interface.
+type Client struct {
 	client redisClient
 }
 
 // Del deletes keys.
-func (c *Cacher) Del(keys ...string) error {
-	_, err := c.client.Del(keys...).Result()
+func (cc *Client) Del(keys ...string) error {
+	_, err := cc.client.Del(keys...).Result()
 	if err != nil {
 		log.Err(err).
 			Str("keys", strings.Join(keys, ",")).
@@ -38,8 +45,8 @@ func (c *Cacher) Del(keys ...string) error {
 }
 
 // Get returns the data stored under a key.
-func (c *Cacher) Get(key string) ([]byte, error) {
-	data, err := c.client.Get(key).Bytes()
+func (cc *Client) Get(key string) ([]byte, error) {
+	data, err := cc.client.Get(key).Bytes()
 	if err != nil {
 		if err.Error() == "redis: nil" {
 			log.Debug().
@@ -56,8 +63,8 @@ func (c *Cacher) Get(key string) ([]byte, error) {
 }
 
 // Set stores data under a key for a set amount of time.
-func (c *Cacher) Set(key string, val interface{}, t time.Duration) error {
-	_, err := c.client.Set(key, val, t).Result()
+func (cc *Client) Set(key string, val interface{}, t time.Duration) error {
+	_, err := cc.client.Set(key, val, t).Result()
 	if err != nil {
 		log.Err(err).
 			Str("key", key).
@@ -68,12 +75,11 @@ func (c *Cacher) Set(key string, val interface{}, t time.Duration) error {
 }
 
 // New returns an instance of Cacher.
-func New() *Cacher {
-	addr := net.JoinHostPort(
-		env.Get("REDIS_HOST", "localhost"),
-		env.Get("REDIS_PORT", "6379"),
-	)
-	mode := env.Get("REDIS_MODE", "server")
+func New() Cacher {
+	var c Cacher
+
+	addr := net.JoinHostPort(env.Get("REDIS_HOST"), env.Get("REDIS_PORT"))
+	mode := env.Get("REDIS_MODE")
 	maxRetries := 1
 	minRetryBackoff := 8 * time.Millisecond
 	maxRetryBackoff := 512 * time.Millisecond
@@ -96,9 +102,8 @@ func New() *Cacher {
 			OnConnect:       onConnect,
 		}
 		rc = redis.NewClusterClient(clusterOptions)
+		c = &Client{rc}
 	case "server":
-		fallthrough
-	default:
 		options := &redis.Options{
 			Addr:            addr,
 			MaxRetries:      maxRetries,
@@ -107,7 +112,28 @@ func New() *Cacher {
 			OnConnect:       onConnect,
 		}
 		rc = redis.NewClient(options)
+		c = &Client{rc}
+	default:
+		// supplied mode is undefined or not a supported mode
+		// default to the noop Cacher
+		c = &noopClient{}
 	}
 
-	return &Cacher{rc}
+	return c
+}
+
+// Noop helper for when the necessary redis environment variables are not set, and we don't want to
+// create redis connection errors.
+type noopClient struct{}
+
+var noopMsg = "redis noop"
+
+func (n noopClient) Del(keys ...string) error {
+	return errors.New(noopMsg)
+}
+func (n noopClient) Get(key string) ([]byte, error) {
+	return []byte{}, errors.New(noopMsg)
+}
+func (n noopClient) Set(key string, val interface{}, t time.Duration) error {
+	return errors.New(noopMsg)
 }
