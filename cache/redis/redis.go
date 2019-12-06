@@ -3,8 +3,8 @@
 package redis
 
 import (
-	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -28,6 +28,12 @@ type Cacher struct {
 // Del deletes keys.
 func (c *Cacher) Del(keys ...string) error {
 	_, err := c.client.Del(keys...).Result()
+	if err != nil {
+		log.Err(err).
+			Str("keys", strings.Join(keys, ",")).
+			Str("command", "DEL").
+			Msg("Redis command failed")
+	}
 	return err
 }
 
@@ -39,11 +45,11 @@ func (c *Cacher) Get(key string) ([]byte, error) {
 			log.Debug().
 				Str("key", key).
 				Msg("Key not found")
-		} else if err == io.EOF {
-			log.Error().
+		} else {
+			log.Err(err).
 				Str("key", key).
-				Err(err).
-				Msg("Redis unavailable")
+				Str("command", "GET").
+				Msg("Redis command failed")
 		}
 	}
 	return data, err
@@ -52,6 +58,12 @@ func (c *Cacher) Get(key string) ([]byte, error) {
 // Set stores data under a key for a set amount of time.
 func (c *Cacher) Set(key string, val interface{}, t time.Duration) error {
 	_, err := c.client.Set(key, val, t).Result()
+	if err != nil {
+		log.Err(err).
+			Str("key", key).
+			Str("command", "SET").
+			Msg("Redis command failed")
+	}
 	return err
 }
 

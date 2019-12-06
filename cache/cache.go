@@ -27,21 +27,12 @@ func Del(keys ...string) error {
 	CacherInit(nil)
 	log := log.With().Str("operation", "DEL").Logger()
 
-	var err error
-
 	if client == nil {
-		err = noClientLogErr(log)
+		err := noClientLogErr(log)
 		return err
 	}
 
-	err = client.Del(keys...)
-	if err != nil {
-		log.Info().
-			Err(err).
-			Msg(err.Error())
-	}
-
-	return err
+	return client.Del(keys...)
 }
 
 // Get returns the data stored under the given key.
@@ -50,24 +41,12 @@ func Get(key string) ([]byte, error) {
 	CacherInit(nil)
 	log := log.With().Str("operation", "GET").Logger()
 
-	var (
-		data []byte
-		err  error
-	)
-
 	if client == nil {
-		err = noClientLogErr(log)
+		err := noClientLogErr(log)
 		return []byte{}, err
 	}
 
-	data, err = client.Get(key)
-	if err != nil {
-		log.Info().
-			Str("key", key).
-			Msg("Cache key not found")
-	}
-
-	return data, err
+	return client.Get(key)
 }
 
 // Set stores data for a set period of time at the given key.
@@ -76,22 +55,12 @@ func Set(key string, data []byte, expiration time.Duration) error {
 	CacherInit(nil)
 	log := log.With().Str("operation", "SET").Logger()
 
-	var err error
-
 	if client == nil {
-		err = noClientLogErr(log)
+		err := noClientLogErr(log)
 		return err
 	}
 
-	err = client.Set(key, data, expiration)
-	if err != nil {
-		log.Info().
-			Err(err).
-			Msg(err.Error())
-		return err
-	}
-
-	return nil
+	return client.Set(key, data, expiration)
 }
 
 var cacherInit sync.Once
