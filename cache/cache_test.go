@@ -1,66 +1,41 @@
-package cache
+package cache_test
 
 import (
-	"os"
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/nickhstr/goweb/cache"
 	"github.com/stretchr/testify/assert"
 )
 
-type mockClient struct{}
+type mockCacher struct{}
 
-func (mc mockClient) Del(key ...string) *redis.IntCmd {
-	return &redis.IntCmd{}
+func (mc mockCacher) Del(key ...string) error {
+	return nil
 }
-func (mc mockClient) Get(key string) *redis.StringCmd {
-	return &redis.StringCmd{}
+func (mc mockCacher) Get(key string) ([]byte, error) {
+	return []byte{}, nil
 }
-func (mc mockClient) Set(key string, val interface{}, ttl time.Duration) *redis.StatusCmd {
-	return &redis.StatusCmd{}
-}
-
-func setupEnv() func() {
-	ogHost := os.Getenv("REDIS_HOST")
-	ogPort := os.Getenv("REDIS_PORT")
-	ogMode := os.Getenv("REDIS_MODE")
-
-	_ = os.Setenv("REDIS_HOST", "localhost")
-	_ = os.Setenv("REDIS_PORT", "6379")
-	_ = os.Setenv("REDIS_MODE", "server")
-
-	return func() {
-		_ = os.Setenv("REDIS_HOST", ogHost)
-		_ = os.Setenv("REDIS_PORT", ogPort)
-		_ = os.Setenv("REDIS_MODE", ogMode)
-	}
+func (mc mockCacher) Set(key string, val interface{}, t time.Duration) error {
+	return nil
 }
 
 func TestDel(t *testing.T) {
 	assert := assert.New(t)
-	restoreEnv := setupEnv()
-	defer restoreEnv()
-
-	ogClient := client
-	defer func() { client = ogClient }()
-	client = mockClient{}
-
-	err := Del("key")
+	cache.CacherInit(func() cache.Cacher {
+		return &mockCacher{}
+	})
+	err := cache.Del("key")
 
 	assert.Nil(err)
 }
 
 func TestGet(t *testing.T) {
 	assert := assert.New(t)
-	restoreEnv := setupEnv()
-	defer restoreEnv()
-
-	ogClient := client
-	defer func() { client = ogClient }()
-	client = mockClient{}
-
-	val, err := Get("key")
+	cache.CacherInit(func() cache.Cacher {
+		return &mockCacher{}
+	})
+	val, err := cache.Get("key")
 
 	assert.Nil(err)
 	assert.Equal([]byte{}, val)
@@ -68,12 +43,9 @@ func TestGet(t *testing.T) {
 
 func TestSet(t *testing.T) {
 	assert := assert.New(t)
-	restoreEnv := setupEnv()
-	defer restoreEnv()
+	cache.CacherInit(func() cache.Cacher {
+		return &mockCacher{}
+	})
 
-	ogClient := client
-	defer func() { client = ogClient }()
-	client = mockClient{}
-
-	assert.NotPanics(func() { _ = Set("key", []byte{}, 60*time.Second) })
+	assert.NotPanics(func() { _ = cache.Set("key", []byte{}, 60*time.Second) })
 }
