@@ -1,5 +1,8 @@
 // Package cache provides a simple key-value cache store, supporting
 // just a handful of caching operations.
+// Note, if not explicitly set, a default cache client will be created;
+// this cache client will be used for all usage of this package in a
+// given application.
 package cache
 
 import (

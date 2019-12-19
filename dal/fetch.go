@@ -12,11 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nickhstr/goweb/cache"
+	"github.com/nickhstr/goweb/cache/redis"
 	"github.com/nickhstr/goweb/logger"
 )
 
 var log = logger.New("dal")
+
+// Setup cache client
+var cache = redis.New()
 
 // DefaultClient is the default http client for Fetch. Similar to http.DefaultClient, but sets
 // a timeout.
