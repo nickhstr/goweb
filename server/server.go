@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -18,72 +17,79 @@ import (
 
 var log = logger.New("server")
 
-// Start creates and starts a server, listening on "address"
-func Start(mux http.Handler) error {
+// Server is a light wrapper around http.Server
+type Server struct {
+	*http.Server
+	address  string
+	listener net.Listener
+	// Channel used to signal server has shutdown
+	serverShutdown chan struct{}
+}
+
+// StartNew creates a Server and starts it.
+func StartNew(h http.Handler) error {
+	srv, err := New(&http.Server{
+		Handler: h,
+	})
+	if err != nil {
+		return err
+	}
+
+	return srv.Start()
+}
+
+// New creates a new Server.
+func New(s *http.Server) (*Server, error) {
 	// Default server timout, in seconds
-	const defaultTimeout = 15
+	const defaultSrvTimeout = 15 * time.Second
 	var (
-		address  string
-		listener net.Listener
-		err      error
+		srv *Server
+		err error
 	)
 
-	address = net.JoinHostPort(Host(), env.Get("PORT", "3000"))
-	listener, err = PreferredListener(address)
+	address := net.JoinHostPort(Host(), env.Get("PORT", "3000"))
+	listener, err := PreferredListener(address)
 	if err != nil {
 		// Non-nil error means the address wanted is taken. Time to find a free one.
 		listener, err = FreePortListener()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if listener != nil {
 			address = listener.Addr().String()
 		}
 	}
 
-	dnsCacheEnabled, err := strconv.ParseBool(env.Get("DNS_CACHE_ENABLED", "true"))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to convert 'DNS_CACHE_ENABLED' to bool")
-		return err
+	// ensure timeouts are set
+	if s.ReadTimeout == 0 {
+		s.ReadTimeout = defaultSrvTimeout
 	}
-	// TTL measured in seconds
-	dnsCacheTTL, err := strconv.Atoi(env.Get("DNS_CACHE_TTL", "300"))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Failed to convert 'DNS_CACHE_TTL' to int")
-		return err
-	}
-	DNSCache(
-		dnsCacheEnabled,
-		dnsCacheTTL,
-	)
-
-	srvTimeout, err := strconv.Atoi(env.Get("SERVER_TIMEOUT", strconv.Itoa(defaultTimeout)))
-	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("Invalid SERVER_TIMEOUT set")
-		return err
+	if s.WriteTimeout == 0 {
+		s.WriteTimeout = defaultSrvTimeout
 	}
 
-	srv := &http.Server{
-		Handler:      mux,
-		ReadTimeout:  time.Duration(srvTimeout) * time.Second,
-		WriteTimeout: time.Duration(srvTimeout) * time.Second,
+	srv = &Server{
+		s,
+		address,
+		listener,
+		make(chan struct{}),
 	}
 
-	idlConnsClosed := make(chan struct{})
-	go shutdown(srv, idlConnsClosed)
+	return srv, nil
+}
+
+// Start begins serving, and listens for termination signals to shutdown gracefully.
+func (srv *Server) Start() error {
+	var err error
+
+	go srv.shutdown()
 
 	log.Log().
-		Str("address", address).
+		Str("address", srv.address).
 		Str("mode", env.Get("GO_ENV", "development")).
 		Msg("Server listening")
 
-	err = srv.Serve(listener)
+	err = srv.Serve(srv.listener)
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatal().
 			Err(err).
@@ -91,17 +97,17 @@ func Start(mux http.Handler) error {
 		return err
 	}
 
-	<-idlConnsClosed
+	<-srv.serverShutdown
 
 	return nil
 }
 
-// Shutdown server gracefully on SIGINT or SIGTERM
-func shutdown(srv *http.Server, idleConnectionsClosed chan struct{}) {
+// Shutdown server gracefully on SIGINT or SIGTERM.
+func (srv *Server) shutdown() {
 	// Block until signal is received
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
-	<-sigint
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		log.Error().
@@ -112,7 +118,7 @@ func shutdown(srv *http.Server, idleConnectionsClosed chan struct{}) {
 	log.Log().Msg("Server shutdown")
 
 	// Close channel to signal shutdown is complete
-	close(idleConnectionsClosed)
+	close(srv.serverShutdown)
 }
 
 // PreferredListener will attempt to create a listener for the given address.
