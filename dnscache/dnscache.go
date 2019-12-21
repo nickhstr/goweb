@@ -1,4 +1,4 @@
-package server
+package dnscache
 
 import (
 	"context"
@@ -9,23 +9,21 @@ import (
 	"github.com/rs/dnscache"
 )
 
-// DNSCache adds caching to dns lookups, performed by the standard library's http.DefaultClient.
+// Disable resets the dial context back to http's default DialContext
+func Disable() {
+	// The default DialContext used by http.DefaultTransport
+	defaultDialContext := (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+		DualStack: true,
+	}).DialContext
+	http.DefaultTransport.(*http.Transport).DialContext = defaultDialContext
+}
+
+// Enable adds caching to dns lookups, performed by the standard library's http.DefaultTransport.
 // TTL in this case doesn't truly mean TTL for an address; rather, it determines the number of
 // seconds to use for the cache refresh interval.
-func DNSCache(enable bool, ttl int) {
-	if !enable {
-		// The default DialContext used by http.DefaultTransport
-		defaultDialContext := (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).DialContext
-		// Reset the DialContext, in case it has been altered from its default value
-		http.DefaultTransport.(*http.Transport).DialContext = defaultDialContext
-
-		return
-	}
-
+func Enable(ttl int) {
 	r := &dnscache.Resolver{}
 	http.DefaultTransport.(*http.Transport).DialContext = cachedDialContext(r)
 
