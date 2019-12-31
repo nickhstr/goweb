@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/handlers v1.4.2
 	github.com/joho/godotenv v1.3.0
 	github.com/mattn/go-isatty v0.0.11 // indirect
-	github.com/newrelic/go-agent v2.15.0+incompatible
+	github.com/newrelic/go-agent/v3 v3.0.0
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
 	github.com/rs/zerolog v1.17.2
 	github.com/stretchr/testify v1.4.0

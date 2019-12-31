@@ -5,36 +5,42 @@ import (
 	"os"
 	"strconv"
 
-	nr "github.com/newrelic/go-agent"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
 	"github.com/rs/zerolog"
 )
 
 var (
-	app    nr.Application
-	config nr.Config
+	app *newrelic.Application
 )
 
 func init() {
-	enabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_ENABLED", "false"))
 	appName := env.Get("NEW_RELIC_APP_NAME")
 	license := env.Get("NEW_RELIC_LICENSE_KEY")
 	log := logger.New("newrelic")
 
-	if !enabled {
-		return
-	} else if appName == "" || license == "" {
+	if appName == "" || license == "" {
 		log.Error().
 			Str("app", appName).
 			Str("license", license).
 			Msg("missing newrelic options")
 	} else if appName != "" && license != "" {
-		config = nr.NewConfig(appName, license)
-		setupLog(&config)
+		enabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_ENABLED", "false"))
+
+		configOptions := []newrelic.ConfigOption{
+			newrelic.ConfigEnabled(enabled),
+			newrelic.ConfigLicense(license),
+		}
+
+		logEnabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_LOG_ENABLED", "false"))
+		if logEnabled {
+			l := NewLogger()
+			configOptions = append(configOptions, newrelic.ConfigLogger(l))
+		}
 
 		var err error
-		if app, err = nr.NewApplication(config); err != nil {
+		if app, err = newrelic.NewApplication(configOptions...); err != nil {
 			log.Error().
 				Err(err).
 				Msg("failed to create newrelic application")
@@ -44,7 +50,7 @@ func init() {
 }
 
 // App provides access to the newrelic application instance.
-func App() nr.Application {
+func App() *newrelic.Application {
 	return app
 }
 
@@ -52,7 +58,7 @@ func App() nr.Application {
 func Handler(h http.Handler, path string) http.Handler {
 	nrApp := App()
 	if nrApp != nil {
-		_, handler := nr.WrapHandle(nrApp, path, h)
+		_, handler := newrelic.WrapHandle(nrApp, path, h)
 
 		return handler
 	}
@@ -96,18 +102,10 @@ func (l *nrLogger) DebugEnabled() bool {
 	return false
 }
 
-// newLogger returns a custom logger which satisfies the newrelic Logger interface.
-func newLogger() nr.Logger {
+// NewLogger returns a custom logger which satisfies the newrelic Logger interface.
+func NewLogger() newrelic.Logger {
 	logLevel := env.Get("NEW_RELIC_LOG_LEVEL", "error")
 	log := logger.NewWithLevel("newrelic", logLevel)
 
 	return &nrLogger{log}
-}
-
-func setupLog(c *nr.Config) {
-	logEnabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_LOG_ENABLED", "false"))
-
-	if logEnabled {
-		c.Logger = newLogger()
-	}
 }
