@@ -1,10 +1,11 @@
-package middleware
+package middleware_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/nickhstr/goweb/middleware"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,9 +14,14 @@ func TestLogger(t *testing.T) {
 	assert := assert.New(t)
 
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("Hello"))
+		w.Write([]byte("Hello"))
 	})
-	handler := Logger(helloHandler)
+	opts := middleware.LoggerOptions{
+		GitCommit: "abc123",
+		Name:      "test",
+		Version:   "1.0.0",
+	}
+	handler := middleware.Logger(opts)(helloHandler)
 	respRec := httptest.NewRecorder()
 
 	req, err := http.NewRequest(http.MethodGet, "/", nil)

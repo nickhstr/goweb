@@ -25,7 +25,7 @@ func TestRecover(t *testing.T) {
 		{
 			"response from successful handler should not be modified",
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, _ = w.Write([]byte("all good"))
+				w.Write([]byte("all good"))
 			}),
 			http.StatusOK,
 		},

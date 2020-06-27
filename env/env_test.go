@@ -12,6 +12,7 @@ func TestGet(t *testing.T) {
 	goEnv := "GO_ENV"
 	originalVal, _ := os.LookupEnv(goEnv)
 	os.Setenv(goEnv, "test")
+
 	defer os.Setenv(goEnv, originalVal)
 
 	tests := []struct {
@@ -54,6 +55,7 @@ func TestIsProd(t *testing.T) {
 	goEnv := "GO_ENV"
 	originalVal := env.Get(goEnv)
 	os.Setenv(goEnv, "production")
+
 	defer os.Setenv(goEnv, originalVal)
 
 	assert.True(env.IsProd(), "returns true when GO_ENV is set to 'production'")
@@ -62,8 +64,10 @@ func TestIsProd(t *testing.T) {
 func TestEnvVarsToValidate(t *testing.T) {
 	originalGoEnv := env.Get("GO_ENV")
 	originalLogLevel := env.Get("LOG_LEVEL")
+
 	os.Setenv("GO_ENV", "test")
 	os.Unsetenv("LOG_LEVEL")
+
 	defer os.Setenv("GO_ENV", originalGoEnv)
 	defer os.Setenv("LOG_LEVEL", originalLogLevel)
 

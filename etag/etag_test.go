@@ -50,3 +50,26 @@ func TestGenerate(t *testing.T) {
 		})
 	}
 }
+
+// Create variable outside of BenchmarkGenerate's scope to avoid
+// compiler optimizations artificially lowering the run time
+// of the benchmark.
+var benchedTag string
+
+func BenchmarkGenerate(b *testing.B) {
+	b.ReportAllocs()
+
+	var hash string
+
+	content := []byte(`let's see how fast Generate can create a hash...
+		Here's a line.
+		And here's another line.
+		Just testing some content here, don't mind me.
+	`)
+
+	for n := 0; n < b.N; n++ {
+		hash = etag.Generate(content, false)
+	}
+
+	benchedTag = hash
+}

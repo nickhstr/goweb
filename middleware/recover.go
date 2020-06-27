@@ -6,11 +6,12 @@ import (
 	"runtime/debug"
 
 	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/write"
 	"github.com/rs/zerolog/hlog"
 )
 
 // Recover middleware recovers from panics, and logs the error.
-func Recover(handler http.Handler) http.Handler {
+func Recover(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -21,15 +22,16 @@ func Recover(handler http.Handler) http.Handler {
 					Msg(errMsg)
 
 				if env.IsProd() {
-					http.Error(w, errMsg, http.StatusInternalServerError)
+					write.Error(w, errMsg, http.StatusInternalServerError)
 					return
 				}
 
+				w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprintf(w, "<h1>panic: %v</h1><pre>%s</pre>", err, stack)
 			}
 		}()
 
-		handler.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 	})
 }

@@ -1,4 +1,4 @@
-package middleware
+package middleware_test
 
 import (
 	"encoding/json"
@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/nickhstr/goweb/middleware"
+	"github.com/nickhstr/goweb/write"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,66 +16,66 @@ func TestAuth(t *testing.T) {
 	helloResp := []byte("Hello world")
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(helloResp)
+		w.Write(helloResp)
 	})
 
-	errResponse := func(msg string) []byte {
-		resp, _ := json.Marshal(unauthError{msg})
+	errResponse := func(err string) []byte {
+		resp, _ := json.Marshal(write.ErrorResponse{
+			Status:     http.StatusUnauthorized,
+			StatusText: http.StatusText(http.StatusUnauthorized),
+			Error:      err,
+		})
+		// Add newline, as write.Error uses json.Encoder, which adds a newline
+		resp = append(resp, '\n')
 
 		return resp
 	}
 
 	tests := []struct {
 		name string
-		AuthConfig
+		middleware.AuthOptions
 		requestPath  string
-		expectedCode int
 		expectedBody []byte
 	}{
 		{
 			"a request with secret key should return handler's response",
-			AuthConfig{
+			middleware.AuthOptions{
 				SecretKey:    "supersecret",
 				ErrorMessage: "Ah ah ah ah ahh, you didn't say the magic word",
 			},
 			"/?apiKey=supersecret",
-			http.StatusOK,
 			helloResp,
 		},
 		{
 			"a request without secret key should return error response",
-			AuthConfig{
+			middleware.AuthOptions{
 				SecretKey:    "supersecret",
 				ErrorMessage: "Ah ah ah ah ahh, you didn't say the magic word",
 			},
 			"/?apiKey=blah",
-			http.StatusUnauthorized,
 			errResponse("Ah ah ah ah ahh, you didn't say the magic word"),
 		},
 		{
-			"default error message should be used when one is not supplied to AuthConfig",
-			AuthConfig{
+			"default error message should be used when one is not supplied to AuthOptions",
+			middleware.AuthOptions{
 				SecretKey: "supersecret",
 			},
 			"/?apiKey=blah",
-			http.StatusUnauthorized,
 			errResponse("invalid API key supplied"),
 		},
 		{
 			"supplied handler's response should be served when no secret key is set",
-			AuthConfig{},
+			middleware.AuthOptions{},
 			"/",
-			http.StatusOK,
 			helloResp,
 		},
 		{
 			"whitelisted routes should not require authentication",
-			AuthConfig{
+			middleware.AuthOptions{
 				SecretKey: "supersecret",
 				WhiteList: []string{"/hello"},
 			},
 			"/hello",
-			http.StatusOK,
 			helloResp,
 		},
 	}
@@ -82,7 +84,7 @@ func TestAuth(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			assert := assert.New(t)
 			respRec := httptest.NewRecorder()
-			handler := Auth(test.AuthConfig)(helloHandler)
+			handler := middleware.Auth(test.AuthOptions)(helloHandler)
 
 			req, err := http.NewRequest(http.MethodGet, test.requestPath, nil)
 			if err != nil {
@@ -96,7 +98,6 @@ func TestAuth(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assert.Equal(test.expectedCode, respRec.Code)
 			assert.Equal(test.expectedBody, respBody)
 		})
 	}

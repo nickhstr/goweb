@@ -3,12 +3,15 @@ linters:
     - dogsled
     - dupl
     - goconst
+    - gofmt
     - goimports
     - golint
+    - gosimple
     - prealloc
     - staticcheck
     - unconvert
     - unused
+    - wsl
 
 issues:
   # Disable max issues
@@ -18,3 +21,9 @@ issues:
     - text: "SA1019:"
       linters:
         - staticcheck
+    - text: "Error return value of `w.Write` is not checked"
+      linters:
+        - errcheck
+run:
+  skip-dirs:
+    - node_modules

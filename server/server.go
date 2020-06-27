@@ -1,3 +1,6 @@
+// Package server provides an enhanced http.Server and convenience functions.
+// Servers are designed to be robust, flexible, and graceful in their shutdown
+// process.
 package server
 
 import (
@@ -17,7 +20,7 @@ import (
 
 var log = logger.New("server")
 
-// Server is a light wrapper around http.Server
+// Server is a light wrapper around http.Server.
 type Server struct {
 	*http.Server
 	address  string
@@ -38,10 +41,11 @@ func StartNew(h http.Handler) error {
 	return srv.Start()
 }
 
-// New creates a new Server.
+// New creates a new Server, built off of a base http.Server.
 func New(s *http.Server) (*Server, error) {
 	// Default server timout, in seconds
 	const defaultSrvTimeout = 15 * time.Second
+
 	var (
 		srv *Server
 		err error
@@ -49,12 +53,14 @@ func New(s *http.Server) (*Server, error) {
 
 	address := net.JoinHostPort(Host(), env.Get("PORT", "3000"))
 	listener, err := PreferredListener(address)
+
 	if err != nil {
 		// Non-nil error means the address wanted is taken. Time to find a free one.
 		listener, err = FreePortListener()
 		if err != nil {
 			return nil, err
 		}
+
 		if listener != nil {
 			address = listener.Addr().String()
 		}
@@ -64,6 +70,7 @@ func New(s *http.Server) (*Server, error) {
 	if s.ReadTimeout == 0 {
 		s.ReadTimeout = defaultSrvTimeout
 	}
+
 	if s.WriteTimeout == 0 {
 		s.WriteTimeout = defaultSrvTimeout
 	}
@@ -87,6 +94,7 @@ func (srv *Server) Start() error {
 	log.Log().
 		Str("address", srv.address).
 		Str("mode", env.Get("GO_ENV", "development")).
+		Int("pid", os.Getpid()).
 		Msg("Server listening")
 
 	err = srv.Serve(srv.listener)
@@ -94,6 +102,7 @@ func (srv *Server) Start() error {
 		log.Fatal().
 			Err(err).
 			Msg("Server failed to start")
+
 		return err
 	}
 
@@ -109,7 +118,12 @@ func (srv *Server) shutdown() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	<-stop
 
-	if err := srv.Shutdown(context.Background()); err != nil {
+	// Allow up to thirty seconds for server operations to finish before
+	// canceling them.
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
 		log.Error().
 			Err(err).
 			Msg("Server shutdown error")

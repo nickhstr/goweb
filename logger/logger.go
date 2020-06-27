@@ -1,3 +1,5 @@
+// Package logger creates structured, leveled loggers.
+// These loggers have a focus on performance and composability.
 package logger
 
 import (
@@ -8,10 +10,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// Logger provides a convenient alias for other packages
-type Logger = zerolog.Logger
-
 var rootLogger Logger
+
+// Logger provides a convenient alias for other packages.
+type Logger = zerolog.Logger
 
 func init() {
 	rootLogger = zerolog.New(logWriter()).
@@ -51,6 +53,7 @@ func level(logLevel string) zerolog.Level {
 func logWriter() io.Writer {
 	// See https://golang.org/pkg/time/#pkg-constants for time layout rules
 	const devTimeFormat = "2006/01/2 15:04:05"
+
 	var out io.Writer
 
 	if !env.IsProd() {

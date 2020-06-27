@@ -1,135 +1,26 @@
+// Package middleware provides multiple middlewares, useful for any HTTP service.
+// These middlewares are not specific to any application, and are made to be as
+// reusable and idiomatic as possible.
+// Compatibility is guaranteed for `net/http`, however these middlewares should
+// be compatible with any third-party package which conforms to the standard
+// library's APIs.
 package middleware
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
 	"net/http"
-	"path"
-	"time"
-
-	"github.com/gorilla/handlers"
-	"github.com/nickhstr/goweb/env"
-	"github.com/nickhstr/goweb/logger"
-	"github.com/unrolled/secure"
 )
 
-var startTime time.Time
-
-func init() {
-	startTime = time.Now()
-}
-
-// Middleware represents the function type for all middleware.
-type Middleware func(http.Handler) http.Handler
+// Middleware aliases the function type for all middleware.
+type Middleware = func(http.Handler) http.Handler
 
 // Compose adds middleware handlers to a given handler.
 // Middleware handlers are ordered from first to last.
-func Compose(handler http.Handler, middlewares ...Middleware) http.Handler {
+func Compose(h http.Handler, m ...Middleware) http.Handler {
 	// Execute middleware by LIFO order, so that consumers of Compose can order
-	// their middlewares from first to last
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		handler = middlewares[i](handler)
+	// their m from first to last
+	for i := len(m) - 1; i >= 0; i-- {
+		h = m[i](h)
 	}
 
-	return handler
-}
-
-// Config holds the values needed for Create()
-type Config struct {
-	Auth              bool
-	AppName           string
-	AppVersion        string
-	Compress          bool
-	Debug             bool
-	EnvVarsToValidate []string
-	Etag              bool
-	GitRevision       string
-	Handler           http.Handler
-	Region            string
-	SecureOptions     secure.Options
-	WhiteList         []string
-}
-
-// Create returns the default middleware composition, useful for all general
-// services.
-// Middleware should be added in a specific order. If any new middleware depends on
-// other middleware, the new middleware should follow afterward.
-func Create(config Config) http.Handler {
-	var (
-		healthPath = path.Join("/", config.AppName, "health")
-		log        = logger.New("middleware")
-		middleware []Middleware
-	)
-
-	err := env.ValidateEnvVars(config.EnvVarsToValidate)
-	if err != nil {
-		// Log invalid env vars and exit
-		log.Fatal().Err(err).Msg("Invalid environment variables")
-	}
-
-	// Add initial middleware
-	middleware = append(
-		middleware,
-		Logger,
-		Recover,
-		Secure(config.SecureOptions),
-	)
-
-	if config.Auth {
-		secretKey := env.Get("SECRET_KEY", "i am iron man")
-
-		wl := []string{"/", healthPath}
-		if config.WhiteList != nil {
-			wl = config.WhiteList
-		}
-
-		secretHash := md5.Sum([]byte(secretKey))
-
-		middleware = append(middleware, Auth(AuthConfig{
-			WhiteList: wl,
-			SecretKey: hex.EncodeToString(secretHash[:]),
-		}))
-	}
-
-	if config.Etag {
-		middleware = append(middleware, Etag)
-	}
-
-	middleware = append(
-		middleware,
-		Headers(AppHeaders{
-			AppName:     config.AppName,
-			AppVersion:  config.AppVersion,
-			GitRevision: config.GitRevision,
-			Region:      config.Region,
-		}),
-		Health(HealthConfig{
-			Path: healthPath,
-			Callback: func() map[string]string {
-				var healthResponse = map[string]string{
-					"name":    config.AppName,
-					"version": config.AppVersion,
-					"region":  config.Region,
-					"sha1":    config.GitRevision,
-					"uptime":  fmt.Sprintf("%fs", time.Since(startTime).Seconds()),
-				}
-
-				return healthResponse
-			},
-		}),
-	)
-
-	if config.Compress {
-		middleware = append(middleware, handlers.CompressHandler)
-	}
-
-	if config.Debug {
-		middleware = append(middleware, Debug)
-	}
-
-	return Compose(
-		config.Handler,
-		middleware...,
-	)
+	return h
 }

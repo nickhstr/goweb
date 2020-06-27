@@ -1,4 +1,4 @@
-package middleware
+package middleware_test
 
 import (
 	"net/http"
@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/nickhstr/goweb/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/unrolled/secure"
 )
@@ -18,12 +19,13 @@ func TestSecure(t *testing.T) {
 	goEnv := "GO_ENV"
 	originalVal, _ := os.LookupEnv(goEnv)
 	os.Setenv(goEnv, "test")
+
 	defer os.Setenv(goEnv, originalVal)
 
 	helloHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte("Hello"))
+		w.Write([]byte("Hello"))
 	})
-	handler := Secure(secure.Options{})(helloHandler)
+	handler := middleware.Secure(secure.Options{})(helloHandler)
 	respRec := httptest.NewRecorder()
 
 	req, err := http.NewRequest(http.MethodGet, "/", nil)
