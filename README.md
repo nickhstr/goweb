@@ -11,9 +11,9 @@ Note: Go modules are the only supported dependency tool.
 ## Features
 * General middleware
 * Configurable logger - built on github.com/rs/zerolog
-* Router - routes registration with github.com/go-chi/chi
+* Router - routing with github.com/gorilla/mux
 * Server - dns lookup caching and automatic port resolution
-* Data access layer - request client
+* Data access layer - request client with caching
 * Cache - a key-value cache, using Redis
 * Newrelic - handler wrapper and custom logging, using github.com/newrelic/go-agent
 * Environment variable helpers
