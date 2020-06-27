@@ -6,4 +6,5 @@ package tools
 import (
 	_ "github.com/cortesi/modd/cmd/modd"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	_ "github.com/psampaz/go-mod-outdated"
 )

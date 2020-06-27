@@ -1,52 +1,74 @@
 // Package redis provides a wrapper around github.com/go-redis/redis, specifically
-// to satisfy the cache.Cacher interface.
+// to satisfy the cache.Cache interface.
 package redis
 
 import (
+	"context"
 	"errors"
 	"net"
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v7"
+	"github.com/newrelic/go-agent/v3/integrations/nrredis-v7"
 	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
 )
 
 var log = logger.New("redis")
 
-type redisClient interface {
+type redisCacher interface {
 	Del(...string) *redis.IntCmd
 	Get(string) *redis.StringCmd
 	Set(string, interface{}, time.Duration) *redis.StatusCmd
 }
 
 type Cacher interface {
-	Del(...string) error
-	Get(string) ([]byte, error)
-	Set(string, interface{}, time.Duration) error
+	Del(context.Context, ...string) error
+	Get(context.Context, string) ([]byte, error)
+	Set(context.Context, string, interface{}, time.Duration) error
 }
 
-// Client holds a redisClient instance, and satisfies the cache.Cacher interface.
+// Client holds a redisCacher instance, and satisfies the cache.Cache interface.
 type Client struct {
-	client redisClient
+	client redisCacher
 }
 
 // Del deletes keys.
-func (cc *Client) Del(keys ...string) error {
-	_, err := cc.client.Del(keys...).Result()
+func (c *Client) Del(ctx context.Context, keys ...string) error {
+	var err error
+
+	switch cc := c.client.(type) {
+	case *redis.ClusterClient:
+		_, err = cc.WithContext(ctx).Del(keys...).Result()
+	case *redis.Client:
+		_, err = cc.WithContext(ctx).Del(keys...).Result()
+	}
+
 	if err != nil {
 		log.Err(err).
 			Str("keys", strings.Join(keys, ",")).
 			Str("command", "DEL").
 			Msg("Redis command failed")
 	}
+
 	return err
 }
 
 // Get returns the data stored under a key.
-func (cc *Client) Get(key string) ([]byte, error) {
-	data, err := cc.client.Get(key).Bytes()
+func (c *Client) Get(ctx context.Context, key string) ([]byte, error) {
+	var (
+		data []byte
+		err  error
+	)
+
+	switch cc := c.client.(type) {
+	case *redis.ClusterClient:
+		data, err = cc.WithContext(ctx).Get(key).Bytes()
+	case *redis.Client:
+		data, err = cc.WithContext(ctx).Get(key).Bytes()
+	}
+
 	if err != nil {
 		if err.Error() == "redis: nil" {
 			log.Debug().
@@ -59,22 +81,32 @@ func (cc *Client) Get(key string) ([]byte, error) {
 				Msg("Redis command failed")
 		}
 	}
+
 	return data, err
 }
 
 // Set stores data under a key for a set amount of time.
-func (cc *Client) Set(key string, val interface{}, t time.Duration) error {
-	_, err := cc.client.Set(key, val, t).Result()
+func (c *Client) Set(ctx context.Context, key string, val interface{}, t time.Duration) error {
+	var err error
+
+	switch cc := c.client.(type) {
+	case *redis.ClusterClient:
+		_, err = cc.WithContext(ctx).Set(key, val, t).Result()
+	case *redis.Client:
+		_, err = cc.WithContext(ctx).Set(key, val, t).Result()
+	}
+
 	if err != nil {
 		log.Err(err).
 			Str("key", key).
 			Str("command", "SET").
 			Msg("Redis command failed")
 	}
+
 	return err
 }
 
-// New returns an instance of Cacher.
+// New returns an instance of Cache.
 func New() Cacher {
 	var c Cacher
 
@@ -88,10 +120,10 @@ func New() Cacher {
 			Str("address", addr).
 			Str("mode", mode).
 			Msg("Connected to Redis")
+
 		return nil
 	}
 
-	var rc redisClient
 	switch mode {
 	case "cluster":
 		clusterOptions := &redis.ClusterOptions{
@@ -101,7 +133,8 @@ func New() Cacher {
 			MaxRetryBackoff: maxRetryBackoff,
 			OnConnect:       onConnect,
 		}
-		rc = redis.NewClusterClient(clusterOptions)
+		rc := redis.NewClusterClient(clusterOptions)
+		rc.AddHook(nrredis.NewHook(nil))
 		c = &Client{rc}
 	case "server":
 		options := &redis.Options{
@@ -111,11 +144,12 @@ func New() Cacher {
 			MaxRetryBackoff: maxRetryBackoff,
 			OnConnect:       onConnect,
 		}
-		rc = redis.NewClient(options)
+		rc := redis.NewClient(options)
+		rc.AddHook(nrredis.NewHook(options))
 		c = &Client{rc}
 	default:
 		// supplied mode is undefined or not a supported mode
-		// default to the noop Cacher
+		// default to the noop Cache
 		c = &noopClient{}
 	}
 
@@ -128,12 +162,12 @@ type noopClient struct{}
 
 var noopMsg = "redis noop"
 
-func (n noopClient) Del(keys ...string) error {
+func (n noopClient) Del(ctx context.Context, keys ...string) error {
 	return errors.New(noopMsg)
 }
-func (n noopClient) Get(key string) ([]byte, error) {
+func (n noopClient) Get(ctx context.Context, key string) ([]byte, error) {
 	return []byte{}, errors.New(noopMsg)
 }
-func (n noopClient) Set(key string, val interface{}, t time.Duration) error {
+func (n noopClient) Set(ctx context.Context, key string, val interface{}, t time.Duration) error {
 	return errors.New(noopMsg)
 }

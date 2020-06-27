@@ -1,55 +1,59 @@
 package middleware
 
 import (
-	"encoding/json"
 	"net/http"
 	"regexp"
+
+	"github.com/nickhstr/goweb/write"
 )
 
-// AuthConfig holds the necessary values for the authentication middleware
-type AuthConfig struct {
+// AuthOptions holds the necessary values for the authentication middleware
+type AuthOptions struct {
 	WhiteList    []string
 	APIKeyName   string
 	SecretKey    string
 	ErrorMessage string
 }
 
-// Auth handles authenticating the request
-func Auth(config AuthConfig) Middleware {
+// Auth handles authenticating requests.
+// Authentication is driven by an API key query parameter.
+func Auth(opts AuthOptions) Middleware {
 	var (
 		defaultAPIKeyName   = "apiKey"
 		defaultErrorMessage = "invalid API key supplied"
 	)
 
-	if config.APIKeyName == "" {
-		config.APIKeyName = defaultAPIKeyName
-	}
-	if config.ErrorMessage == "" {
-		config.ErrorMessage = defaultErrorMessage
+	if opts.APIKeyName == "" {
+		opts.APIKeyName = defaultAPIKeyName
 	}
 
-	wlRegexps := make([]*regexp.Regexp, 0, len(config.WhiteList))
-	for _, pattern := range config.WhiteList {
+	if opts.ErrorMessage == "" {
+		opts.ErrorMessage = defaultErrorMessage
+	}
+
+	wlRegexps := make([]*regexp.Regexp, 0, len(opts.WhiteList))
+
+	for _, pattern := range opts.WhiteList {
 		r := regexp.MustCompile(pattern)
 		wlRegexps = append(wlRegexps, r)
 	}
 
-	return func(handler http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			var (
 				invalidKey     = false
 				whitelistRoute = false
 			)
 
-			unauthHandler := badAuthHandler(config.ErrorMessage)
+			unauthHandler := badAuthHandler(opts.ErrorMessage)
 
-			if config.SecretKey == "" {
-				handler.ServeHTTP(w, r)
+			if opts.SecretKey == "" {
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			apiKey := r.URL.Query().Get(config.APIKeyName)
-			if apiKey == "" || apiKey != config.SecretKey {
+			apiKey := r.URL.Query().Get(opts.APIKeyName)
+			if apiKey == "" || apiKey != opts.SecretKey {
 				invalidKey = true
 			}
 
@@ -63,25 +67,14 @@ func Auth(config AuthConfig) Middleware {
 			if invalidKey && !whitelistRoute {
 				unauthHandler.ServeHTTP(w, r)
 			} else {
-				handler.ServeHTTP(w, r)
+				next.ServeHTTP(w, r)
 			}
 		})
 	}
 }
 
-type unauthError struct {
-	Error string `json:"error"`
-}
-
-func badAuthHandler(errMsg string) http.Handler {
-	errResponse, err := json.Marshal(unauthError{errMsg})
-	if err != nil {
-		errResponse = []byte("Unable to marshal error message")
-	}
-
+func badAuthHandler(err string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnauthorized)
-		_, _ = w.Write(errResponse)
+		write.Error(w, err, http.StatusUnauthorized)
 	})
 }

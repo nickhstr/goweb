@@ -1,6 +1,7 @@
 package cache_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,34 +9,38 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCacher struct{}
+type mockCache struct{}
 
-func (mc mockCacher) Del(key ...string) error {
+func (mc mockCache) Del(ctx context.Context, key ...string) error {
 	return nil
 }
-func (mc mockCacher) Get(key string) ([]byte, error) {
+func (mc mockCache) Get(ctx context.Context, key string) ([]byte, error) {
 	return []byte{}, nil
 }
-func (mc mockCacher) Set(key string, val interface{}, t time.Duration) error {
+func (mc mockCache) Set(ctx context.Context, key string, val interface{}, t time.Duration) error {
 	return nil
 }
 
 func TestDel(t *testing.T) {
 	assert := assert.New(t)
-	cache.CacherInit(func() cache.Cacher {
-		return &mockCacher{}
+
+	cache.Init(func() cache.Cacher {
+		return &mockCache{}
 	})
-	err := cache.Del("key")
+
+	err := cache.Del(context.Background(), "key")
 
 	assert.Nil(err)
 }
 
 func TestGet(t *testing.T) {
 	assert := assert.New(t)
-	cache.CacherInit(func() cache.Cacher {
-		return &mockCacher{}
+
+	cache.Init(func() cache.Cacher {
+		return &mockCache{}
 	})
-	val, err := cache.Get("key")
+
+	val, err := cache.Get(context.Background(), "key")
 
 	assert.Nil(err)
 	assert.Equal([]byte{}, val)
@@ -43,9 +48,10 @@ func TestGet(t *testing.T) {
 
 func TestSet(t *testing.T) {
 	assert := assert.New(t)
-	cache.CacherInit(func() cache.Cacher {
-		return &mockCacher{}
+
+	cache.Init(func() cache.Cacher {
+		return &mockCache{}
 	})
 
-	assert.NotPanics(func() { _ = cache.Set("key", []byte{}, 60*time.Second) })
+	assert.NotPanics(func() { _ = cache.Set(context.Background(), "key", []byte{}, 60*time.Second) })
 }

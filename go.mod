@@ -3,21 +3,31 @@ module github.com/nickhstr/goweb
 go 1.13
 
 require (
-	github.com/bmatcuk/doublestar v1.2.2 // indirect
-	github.com/cortesi/modd v0.0.0-20191202231957-98a770274f90
-	github.com/go-chi/chi v4.0.2+incompatible
-	github.com/go-redis/redis v6.15.6+incompatible
-	github.com/golangci/golangci-lint v1.22.2
+	github.com/bmatcuk/doublestar v1.3.1 // indirect
+	github.com/cortesi/modd v0.0.0-20200427000656-b4c550997d80
+	github.com/cortesi/moddwatch v0.0.0-20200427000745-d26468c93cf0 // indirect
+	github.com/dghubble/sling v1.3.0
+	github.com/go-chi/chi v4.1.2+incompatible
+	github.com/go-redis/redis/v7 v7.4.0
+	github.com/golangci/golangci-lint v1.27.0
 	github.com/gorilla/handlers v1.4.2
+	github.com/gorilla/mux v1.7.4
 	github.com/joho/godotenv v1.3.0
-	github.com/mattn/go-isatty v0.0.11 // indirect
-	github.com/newrelic/go-agent/v3 v3.0.0
+	github.com/mattn/go-colorable v0.1.7 // indirect
+	github.com/newrelic/go-agent/v3 v3.7.0
+	github.com/newrelic/go-agent/v3/integrations/nrgorilla v1.1.0
+	github.com/newrelic/go-agent/v3/integrations/nrmongo v1.0.0
+	github.com/newrelic/go-agent/v3/integrations/nrredis-v7 v1.0.0
+	github.com/prometheus/client_golang v1.7.1
+	github.com/psampaz/go-mod-outdated v0.6.0
+	github.com/rs/cors v1.7.0
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
-	github.com/rs/zerolog v1.17.2
-	github.com/stretchr/testify v1.4.0
-	github.com/unrolled/secure v1.0.7
-	golang.org/x/crypto v0.0.0-20191227163750-53104e6ec876 // indirect
-	golang.org/x/net v0.0.0-20191209160850-c0dbc17a3553 // indirect
-	golang.org/x/sys v0.0.0-20191228213918-04cbcbbfeed8 // indirect
+	github.com/rs/zerolog v1.19.0
+	github.com/stretchr/testify v1.6.1
+	github.com/unrolled/secure v1.0.8
+	go.mongodb.org/mongo-driver v1.3.4
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
+	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
+	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )

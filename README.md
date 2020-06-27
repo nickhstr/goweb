@@ -17,6 +17,7 @@ Note: Go modules are the only supported dependency tool.
 * Cache - a key-value cache, using Redis
 * Newrelic - handler wrapper and custom logging, using github.com/newrelic/go-agent
 * Environment variable helpers
+* Mongodb helpers
 
 ## Contributors
 

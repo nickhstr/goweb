@@ -1,3 +1,5 @@
+// Package etag provides a function for creating a value for use in the ETag
+// response header.
 package etag
 
 import (

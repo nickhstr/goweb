@@ -1,7 +1,8 @@
+// Package env provides helper utilities for getting and validating environment
+// variables.
 package env
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -59,9 +60,7 @@ func ValidateEnvVars(vars []string) error {
 	}
 
 	if len(missingVars) > 0 {
-		errMsg := fmt.Sprintf("missing required env variables: %s\n", strings.Join(missingVars, ", "))
-		err = errors.New(errMsg)
-
+		err = fmt.Errorf("missing required env variables: %s", strings.Join(missingVars, ", "))
 		return err
 	}
 

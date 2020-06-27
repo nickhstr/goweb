@@ -1,3 +1,8 @@
+// Package newrelic allows for simple to use New Relic agent configuration.
+// Standard New Relic environment variable names are used for much of
+// the agent's configuration.
+// Logging is done via the github.com/TheWeatherCompany/packages/go/logger
+// package.
 package newrelic
 
 import (
@@ -11,41 +16,35 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var (
-	app *newrelic.Application
-)
+var app *newrelic.Application
 
 func init() {
+	enabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_ENABLED", "false"))
 	appName := env.Get("NEW_RELIC_APP_NAME")
 	license := env.Get("NEW_RELIC_LICENSE_KEY")
+	logEnabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_LOG_ENABLED", "false"))
 	log := logger.New("newrelic")
 
-	if appName == "" || license == "" {
+	configOptions := []newrelic.ConfigOption{
+		newrelic.ConfigEnabled(enabled),
+		newrelic.ConfigLicense(license),
+		newrelic.ConfigAppName(appName),
+		func(cfg *newrelic.Config) {
+			cfg.ErrorCollector.RecordPanics = true
+		},
+	}
+
+	if logEnabled {
+		l := NewLogger()
+		configOptions = append(configOptions, newrelic.ConfigLogger(l))
+	}
+
+	var err error
+	if app, err = newrelic.NewApplication(configOptions...); err != nil {
 		log.Error().
-			Str("app", appName).
-			Str("license", license).
-			Msg("missing newrelic options")
-	} else if appName != "" && license != "" {
-		enabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_ENABLED", "false"))
-
-		configOptions := []newrelic.ConfigOption{
-			newrelic.ConfigEnabled(enabled),
-			newrelic.ConfigLicense(license),
-		}
-
-		logEnabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_LOG_ENABLED", "false"))
-		if logEnabled {
-			l := NewLogger()
-			configOptions = append(configOptions, newrelic.ConfigLogger(l))
-		}
-
-		var err error
-		if app, err = newrelic.NewApplication(configOptions...); err != nil {
-			log.Error().
-				Err(err).
-				Msg("failed to create newrelic application")
-			os.Exit(1)
-		}
+			Err(err).
+			Msg("failed to create newrelic application")
+		os.Exit(1)
 	}
 }
 
@@ -99,7 +98,7 @@ func (l *nrLogger) Debug(msg string, context map[string]interface{}) {
 }
 
 func (l *nrLogger) DebugEnabled() bool {
-	return false
+	return l.log.GetLevel() == zerolog.DebugLevel
 }
 
 // NewLogger returns a custom logger which satisfies the newrelic Logger interface.

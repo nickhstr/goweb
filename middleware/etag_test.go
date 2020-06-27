@@ -33,7 +33,7 @@ func TestEtag(t *testing.T) {
 				},
 			},
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, _ = w.Write([]byte("all good here"))
+				w.Write([]byte("all good here"))
 			}),
 			http.StatusOK,
 			etag.Generate([]byte("all good here"), true),
@@ -53,7 +53,7 @@ func TestEtag(t *testing.T) {
 			},
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
-				_, _ = w.Write([]byte("not found"))
+				w.Write([]byte("not found"))
 			}),
 			http.StatusNotFound,
 			"",
@@ -73,7 +73,7 @@ func TestEtag(t *testing.T) {
 			},
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte("server error"))
+				w.Write([]byte("server error"))
 			}),
 			http.StatusInternalServerError,
 			"",
@@ -92,7 +92,7 @@ func TestEtag(t *testing.T) {
 				},
 			},
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				_, _ = w.Write([]byte("content not modified"))
+				w.Write([]byte("content not modified"))
 			}),
 			http.StatusNotModified,
 			etag.Generate([]byte("content not modified"), true),

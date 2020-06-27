@@ -25,19 +25,19 @@ func TestNew(t *testing.T) {
 			"production",
 			func(log logger.Logger) []levelWillLog {
 				return []levelWillLog{
-					levelWillLog{
+					{
 						log.Debug,
 						false,
 					},
-					levelWillLog{
+					{
 						log.Info,
 						false,
 					},
-					levelWillLog{
+					{
 						log.Warn,
 						false,
 					},
-					levelWillLog{
+					{
 						log.Error,
 						true,
 					},
@@ -49,19 +49,19 @@ func TestNew(t *testing.T) {
 			"development",
 			func(log logger.Logger) []levelWillLog {
 				return []levelWillLog{
-					levelWillLog{
+					{
 						log.Debug,
 						false,
 					},
-					levelWillLog{
+					{
 						log.Info,
 						true,
 					},
-					levelWillLog{
+					{
 						log.Warn,
 						true,
 					},
-					levelWillLog{
+					{
 						log.Error,
 						true,
 					},
@@ -73,19 +73,19 @@ func TestNew(t *testing.T) {
 			"debug",
 			func(log logger.Logger) []levelWillLog {
 				return []levelWillLog{
-					levelWillLog{
+					{
 						log.Debug,
 						true,
 					},
-					levelWillLog{
+					{
 						log.Info,
 						true,
 					},
-					levelWillLog{
+					{
 						log.Warn,
 						true,
 					},
-					levelWillLog{
+					{
 						log.Error,
 						true,
 					},
@@ -113,7 +113,6 @@ func TestNew(t *testing.T) {
 				}
 			}
 		})
-
 	}
 }
 
