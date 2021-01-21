@@ -3,22 +3,40 @@ name: CI
 on: [push]
 
 jobs:
-  build:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.6
+      - name: Cache Go packages
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      - name: Download Dependencies
+        run: make install-ci
+      - name: Lint
+        run: make lint
 
-    - name: Setup Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: 1.13
-
-    - name: Download Dependencies
-      run: make install
-
-    - name: Lint
-      run: make lint
-
-    - name: Test
-      run: make coverage
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.6
+      - name: Cache Go packages
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      - name: Download Dependencies
+        run: make install-ci
+      - name: Test
+        run: make coverage

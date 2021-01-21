@@ -42,6 +42,16 @@ install:
 	@go install github.com/psampaz/go-mod-outdated
 	@echo "✨ Done."
 
+## install: Downloads/installs all app dependencies
+.PHONY: install-ci
+install-ci:
+	@echo "🚚 Downloading dependencies..."
+	@go mod download
+
+	@echo "🛠  Building Go dependencies..."
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint
+	@echo "✨ Done."
+
 ## lint: Runs linter against Go files
 .PHONY: lint
 lint:
