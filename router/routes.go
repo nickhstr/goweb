@@ -30,7 +30,7 @@ type DefaultRoutesOptions struct {
 }
 
 // DefaultRoutes returns a slice of opinionated routes which most
-// wxu-web services use.
+// services use.
 func DefaultRoutes(opts DefaultRoutesOptions) []Route {
 	return []Route{
 		GetPrometheusRoute(opts.PrometheusOptions),

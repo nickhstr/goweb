@@ -6,10 +6,10 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/newrelic/go-agent/v3/integrations/nrgorilla"
-	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/middleware"
 	"github.com/nickhstr/goweb/newrelic"
 	"github.com/rs/cors"
+	"github.com/spf13/viper"
 )
 
 // DefaultMiddlewareOptions is the configuration struct for router's
@@ -49,7 +49,8 @@ func DefaultMiddleware(opts DefaultMiddlewareOptions) []middleware.Middleware {
 	}
 
 	if opts.AuthOptions.Enabled {
-		secretHash := md5.Sum([]byte(env.Get("SECRET_KEY", "keyboard cat")))
+		viper.SetDefault("SECRET_KEY", "keyboard cat")
+		secretHash := md5.Sum([]byte(viper.GetString("SECRET_KEY")))
 
 		mw = append(mw, middleware.Auth(middleware.AuthOptions{
 			SecretKey: hex.EncodeToString(secretHash[:]),

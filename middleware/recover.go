@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/config"
 	"github.com/nickhstr/goweb/write"
 	"github.com/rs/zerolog/hlog"
 )
@@ -21,7 +21,7 @@ func Recover(next http.Handler) http.Handler {
 					Bytes("stacktrace", stack).
 					Msg(errMsg)
 
-				if env.IsProd() {
+				if config.IsProd() {
 					write.Error(w, errMsg, http.StatusInternalServerError)
 					return
 				}

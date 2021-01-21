@@ -14,8 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/config"
 	"github.com/nickhstr/goweb/logger"
+	"github.com/spf13/viper"
 )
 
 var log = logger.New("server")
@@ -51,7 +52,12 @@ func New(s *http.Server) (*Server, error) {
 		err error
 	)
 
-	address := net.JoinHostPort(Host(), env.Get("PORT", "3000"))
+	port := viper.GetString("PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	address := net.JoinHostPort(Host(), port)
 	listener, err := PreferredListener(address)
 
 	if err != nil {
@@ -93,7 +99,7 @@ func (srv *Server) Start() error {
 
 	log.Log().
 		Str("address", srv.address).
-		Str("mode", env.Get("GO_ENV", "development")).
+		Str("mode", viper.GetString("GO_ENV")).
 		Int("pid", os.Getpid()).
 		Msg("Server listening")
 
@@ -168,13 +174,16 @@ func FreePortListener() (net.Listener, error) {
 
 // Host gets the host for a listener's address.
 func Host() string {
-	var defaultHost string
-
-	if env.IsDev() {
-		defaultHost = "localhost"
-	} else {
-		defaultHost = "0.0.0.0"
+	host := viper.GetString("HOST")
+	if host != "" {
+		return host
 	}
 
-	return env.Get("HOST", defaultHost)
+	if config.IsDev() {
+		host = "localhost"
+	} else {
+		host = "0.0.0.0"
+	}
+
+	return host
 }

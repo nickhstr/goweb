@@ -1,6 +1,6 @@
 module github.com/nickhstr/goweb
 
-go 1.13
+go 1.15
 
 require (
 	github.com/bmatcuk/doublestar v1.3.1 // indirect
@@ -12,7 +12,6 @@ require (
 	github.com/golangci/golangci-lint v1.27.0
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
-	github.com/joho/godotenv v1.3.0
 	github.com/mattn/go-colorable v0.1.7 // indirect
 	github.com/newrelic/go-agent/v3 v3.7.0
 	github.com/newrelic/go-agent/v3/integrations/nrgorilla v1.1.0
@@ -23,6 +22,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
 	github.com/rs/zerolog v1.19.0
+	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
 	github.com/unrolled/secure v1.0.8
 	go.mongodb.org/mongo-driver v1.3.4

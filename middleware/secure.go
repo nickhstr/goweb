@@ -3,7 +3,7 @@ package middleware
 import (
 	"reflect"
 
-	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/config"
 	"github.com/unrolled/secure"
 )
 
@@ -23,7 +23,7 @@ func Secure(opts secure.Options) Middleware {
 		opts = secureDefaultOpts
 	}
 
-	if !env.IsProd() {
+	if !config.IsProd() {
 		opts.IsDevelopment = true
 	}
 
@@ -34,7 +34,7 @@ func Secure(opts secure.Options) Middleware {
 // without requiring options to be provided.
 func SecureDefault() Middleware {
 	opts := secureDefaultOpts
-	if !env.IsProd() {
+	if !config.IsProd() {
 		opts.IsDevelopment = true
 	}
 

@@ -8,8 +8,7 @@ import (
 	"net/http"
 )
 
-// ErrorResponse is the format for JSON error responses, as defined
-// by the wxu-web style guides.
+// ErrorResponse provides a standard error response format.
 type ErrorResponse struct {
 	Status     int    `json:"status"`
 	StatusText string `json:"statusText"`

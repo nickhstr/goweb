@@ -6,8 +6,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/config"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 var rootLogger Logger
@@ -24,7 +25,7 @@ func init() {
 
 func level(logLevel string) zerolog.Level {
 	if logLevel == "" {
-		logLevel = env.Get("LOG_LEVEL")
+		logLevel = viper.GetString("LOG_LEVEL")
 	}
 
 	if logLevel != "" {
@@ -34,7 +35,7 @@ func level(logLevel string) zerolog.Level {
 		}
 	}
 
-	goEnv := env.Get("GO_ENV")
+	goEnv := viper.GetString("GO_ENV")
 
 	switch goEnv {
 	case "development":
@@ -56,7 +57,7 @@ func logWriter() io.Writer {
 
 	var out io.Writer
 
-	if !env.IsProd() {
+	if !config.IsProd() {
 		out = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: devTimeFormat}
 	} else {
 		out = os.Stdout

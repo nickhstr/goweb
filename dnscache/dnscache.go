@@ -5,13 +5,19 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/rs/dnscache"
 )
 
+var mutex = &sync.Mutex{}
+
 // Disable resets the default dial context back to http.Transport's DialContext.
 func Disable() {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	// The default DialContext used by http.DefaultTransport
 	defaultDialContext := (&net.Dialer{
 		Timeout:   30 * time.Second,
@@ -25,6 +31,9 @@ func Disable() {
 // TTL in this case doesn't truly mean TTL for an address; rather, it determines the number of
 // seconds to use for the cache refresh interval.
 func Enable(ttl int) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	dc := DialContext(ttl)
 	http.DefaultTransport.(*http.Transport).DialContext = dc
 }

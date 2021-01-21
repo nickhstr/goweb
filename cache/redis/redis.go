@@ -1,5 +1,5 @@
 // Package redis provides a wrapper around github.com/go-redis/redis, specifically
-// to satisfy the cache.Cache interface.
+// to satisfy the cache.Cacher interface.
 package redis
 
 import (
@@ -11,8 +11,9 @@ import (
 
 	"github.com/go-redis/redis/v7"
 	"github.com/newrelic/go-agent/v3/integrations/nrredis-v7"
-	"github.com/nickhstr/goweb/env"
+	"github.com/nickhstr/goweb/config"
 	"github.com/nickhstr/goweb/logger"
+	"github.com/spf13/viper"
 )
 
 var log = logger.New("redis")
@@ -106,12 +107,24 @@ func (c *Client) Set(ctx context.Context, key string, val interface{}, t time.Du
 	return err
 }
 
-// New returns an instance of Cache.
+// New returns an instance of Cacher.
 func New() Cacher {
 	var c Cacher
 
-	addr := net.JoinHostPort(env.Get("REDIS_HOST"), env.Get("REDIS_PORT"))
-	mode := env.Get("REDIS_MODE")
+	mode := viper.GetString("REDIS_MODE")
+	if mode != "" {
+		// a mode is supplied, validate the base
+		// variables required of every mode
+		if err := config.Validate([]string{
+			"REDIS_HOST",
+			"REDIS_PORT",
+		}); err != nil {
+			log.Err(err).Msg("redis new Cacher error")
+			return &noopClient{}
+		}
+	}
+
+	addr := net.JoinHostPort(viper.GetString("REDIS_HOST"), viper.GetString("REDIS_PORT"))
 	maxRetries := 1
 	minRetryBackoff := 8 * time.Millisecond
 	maxRetryBackoff := 512 * time.Millisecond
@@ -147,9 +160,35 @@ func New() Cacher {
 		rc := redis.NewClient(options)
 		rc.AddHook(nrredis.NewHook(options))
 		c = &Client{rc}
+	case "sentinel":
+		if err := config.Validate([]string{
+			"REDIS_PASSWORD",
+			"REDIS_MASTER_NAME",
+		}); err != nil {
+			// required variables are not defined,
+			// return a no-op client
+			log.Err(err).Msg("redis new Cacher error")
+			return &noopClient{}
+		}
+
+		password := viper.GetString("REDIS_PASSWORD")
+		masterName := viper.GetString("REDIS_MASTER_NAME")
+		sentinelOptions := &redis.FailoverOptions{
+			SentinelAddrs:    []string{addr},
+			SentinelPassword: password,
+			Password:         password,
+			MasterName:       masterName,
+			MaxRetries:       maxRetries,
+			MinRetryBackoff:  minRetryBackoff,
+			MaxRetryBackoff:  maxRetryBackoff,
+			OnConnect:        onConnect,
+		}
+		rc := redis.NewFailoverClient(sentinelOptions)
+		rc.AddHook(nrredis.NewHook(nil))
+		c = &Client{rc}
 	default:
 		// supplied mode is undefined or not a supported mode
-		// default to the noop Cache
+		// default to the no-op Cacher
 		c = &noopClient{}
 	}
 

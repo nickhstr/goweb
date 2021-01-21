@@ -8,21 +8,24 @@ package newrelic
 import (
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
-	"github.com/nickhstr/goweb/env"
 	"github.com/nickhstr/goweb/logger"
 	"github.com/rs/zerolog"
+	"github.com/spf13/viper"
 )
 
 var app *newrelic.Application
 
 func init() {
-	enabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_ENABLED", "false"))
-	appName := env.Get("NEW_RELIC_APP_NAME")
-	license := env.Get("NEW_RELIC_LICENSE_KEY")
-	logEnabled, _ := strconv.ParseBool(env.Get("NEW_RELIC_LOG_ENABLED", "false"))
+	viper.SetDefault("NEW_RELIC_ENABLED", "false")
+	viper.SetDefault("NEW_RELIC_LOG_ENABLED", "false")
+	viper.SetDefault("NEW_RELIC_LOG_LEVEL", "error")
+
+	enabled := viper.GetBool("NEW_RELIC_ENABLED")
+	appName := viper.GetString("NEW_RELIC_APP_NAME")
+	license := viper.GetString("NEW_RELIC_LICENSE_KEY")
+	logEnabled := viper.GetBool("NEW_RELIC_LOG_ENABLED")
 	log := logger.New("newrelic")
 
 	configOptions := []newrelic.ConfigOption{
@@ -103,7 +106,7 @@ func (l *nrLogger) DebugEnabled() bool {
 
 // NewLogger returns a custom logger which satisfies the newrelic Logger interface.
 func NewLogger() newrelic.Logger {
-	logLevel := env.Get("NEW_RELIC_LOG_LEVEL", "error")
+	logLevel := viper.GetString("NEW_RELIC_LOG_LEVEL")
 	log := logger.NewWithLevel("newrelic", logLevel)
 
 	return &nrLogger{log}
