@@ -131,6 +131,17 @@ func TestCache(t *testing.T) {
 			http.StatusInternalServerError,
 		},
 		{
+			"requests with cache=false query param should not use cache",
+			newTestCache(),
+			middleware.CacheOptions{},
+			http.MethodGet,
+			"/some/path/to/good/endpoint?cache=false",
+			goodResponseHandler,
+			false,
+			[]byte("all good in the hood"),
+			http.StatusOK,
+		},
+		{
 			"when configured to use stale, cache should be used for responses with allowed stale response codes",
 			newTestCacheWithData(map[string][]byte{
 				"/some/path/to/bad/endpoint": marshallJSON(&middleware.CachedResponse{

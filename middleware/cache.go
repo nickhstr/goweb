@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -169,6 +170,21 @@ func AddCacheHeader(h http.Header) http.Header {
 	return h
 }
 
+// ContextFromRequest returns a new context, which may or may not
+// add a "no cache" flag.
+// Contexts created from this can be used with cache.UseCache to
+// determine if the cache can be used.
+func ContextFromRequest(r *http.Request) context.Context {
+	ctx := r.Context()
+	nocache := r.URL.Query().Get("cache") == "false"
+
+	if nocache {
+		return cache.ContextWithNoCache(ctx)
+	}
+
+	return ctx
+}
+
 type CachedResponse struct {
 	http.Header
 
@@ -219,7 +235,7 @@ func Cache(c cache.Cacher, opts CacheOptions) Middleware {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
+			ctx := ContextFromRequest(r)
 			log := hlog.FromRequest(r)
 
 			methodNotAllowed := true
