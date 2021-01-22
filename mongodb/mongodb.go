@@ -48,5 +48,5 @@ func New(opts ClientOptions) (*mongo.Client, error) {
 		return client, fmt.Errorf("%w: %s", ErrClientConfig, err.Error())
 	}
 
-	return mongo.NewClient(clientOpts)
+	return client, nil
 }
