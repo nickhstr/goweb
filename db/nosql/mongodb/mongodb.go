@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/nickhstr/goweb/cache"
@@ -28,7 +29,9 @@ type DB struct {
 	cacheKeyPrefix string
 	cacheTTL       time.Duration
 	client         *mongo.Client
+	connected      bool
 	name           string
+	mu             *sync.Mutex
 }
 
 // New creates a new DB instance.
@@ -45,10 +48,16 @@ func New(name string) (*DB, error) {
 		name,
 		5 * time.Minute,
 		client,
+		false,
 		name,
+		&sync.Mutex{},
 	}
 
-	return db, fmt.Errorf("%w: %s", ErrBadClient, err.Error())
+	if err != nil {
+		err = fmt.Errorf("%w: %s", ErrBadClient, err.Error())
+	}
+
+	return db, err
 }
 
 // NewWithClient creates a new DB instance, configured with the
@@ -60,19 +69,45 @@ func NewWithClient(name string, client *mongo.Client) *DB {
 		name,
 		5 * time.Minute,
 		client,
+		false,
 		name,
+		&sync.Mutex{},
 	}
 }
 
 // Connect connects the Mongodb client with the server.
 func (db *DB) Connect(ctx context.Context) error {
-	return db.client.Connect(ctx)
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if db.connected {
+		return nil
+	}
+
+	err := db.client.Connect(ctx)
+	if err == nil {
+		db.connected = true
+	}
+
+	return err
 }
 
 // Disconnect connects the Mongodb client with the server.
 // Call this only when done using the DB.
 func (db *DB) Disconnect(ctx context.Context) error {
-	return db.client.Disconnect(ctx)
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	if !db.connected {
+		return nil
+	}
+
+	err := db.client.Disconnect(ctx)
+	if err == nil {
+		db.connected = false
+	}
+
+	return err
 }
 
 // SetCacher sets the DB's Cacher.
@@ -96,6 +131,11 @@ func (db *DB) SetCacheKeyPrefix(prefix string) *DB {
 func (db *DB) SetCacheTTL(d time.Duration) *DB {
 	db.cacheTTL = d
 	return db
+}
+
+// Ping verifies if the client can connect to the database.
+func (db *DB) Ping(ctx context.Context) error {
+	return db.client.Ping(ctx, nil)
 }
 
 // Collection returns the named Mongodb collection.

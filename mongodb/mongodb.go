@@ -13,10 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var (
-	ErrClientConfig  = errors.New("mongodb: bad config for client")
-	ErrClientConnect = errors.New("mongodb: client could not connect")
-)
+var ErrClientConfig = errors.New("mongodb: bad config for client")
 
 // ClientOptions provides some limited configuration for
 // clients created with NewClient.
