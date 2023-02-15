@@ -17,7 +17,7 @@ require (
 	github.com/newrelic/go-agent/v3/integrations/nrgorilla v1.1.0
 	github.com/newrelic/go-agent/v3/integrations/nrmongo v1.0.0
 	github.com/newrelic/go-agent/v3/integrations/nrredis-v7 v1.0.0
-	github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/client_golang v1.11.1
 	github.com/psampaz/go-mod-outdated v0.6.0
 	github.com/rs/cors v1.7.0
 	github.com/rs/dnscache v0.0.0-20190621150935-06bb5526f76b
@@ -26,8 +26,6 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/unrolled/secure v1.0.8
 	go.mongodb.org/mongo-driver v1.3.4
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
-	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	gopkg.in/h2non/gock.v1 v1.0.15
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
 )
